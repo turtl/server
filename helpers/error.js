@@ -1,0 +1,17 @@
+var make_err_fn = function(status) {
+	return function(msg) {
+		var err = new Error(msg);
+		err.status = status;
+		return err;
+	};
+};
+
+exports.bad_request = make_err_fn(400);
+exports.unauthorized = make_err_fn(401);
+exports.payment_required = make_err_fn(402);
+exports.forbidden = make_err_fn(403);
+exports.not_found = make_err_fn(404);
+exports.conflict = make_err_fn(409);
+
+exports.internal = make_err_fn(500);
+

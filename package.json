@@ -1,0 +1,19 @@
+{
+  "name": "turtl-server",
+  "version": "0.1.0",
+  "description": "Turtl's (Node-based) API",
+  "author": "Andrew Lyon",
+  "license": "AGPL-3.0",
+  "repository": "https://github.com/turtl/server",
+  "main": "server.js",
+  "dependencies": {
+    "bluebird": "^3.4.7",
+    "body-parser": "^1.15.2",
+    "express": "^4.14.0",
+    "js-yaml": "^3.7.0",
+    "method-override": "^2.3.7",
+    "morgan": "^1.7.0",
+    "pg": "^6.1.2",
+    "winston": "^2.3.0"
+  }
+}
