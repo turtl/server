@@ -1,3 +1,5 @@
+"use strict";
+
 /**
  * This file provides a very simple CRUD model for querying and saving data in
  * postgres. note that the upsert function *requires* postgres >= 9.5.
@@ -22,7 +24,7 @@ var clean = function(lit) { return lit.replace(/[^0-9a-z_"-]/g, ''); };
  */
 exports.json = function(data) {
 	if(data === undefined) return null;
-	return JSON.stringify(data || null);
+	return JSON.stringify(data);
 };
 
 /**
@@ -67,9 +69,6 @@ var builder = function(qry, query_data) {
 
 // use this to wrap your arguments to be injected as literals. literally.
 exports.literal = function(val) { return {_omg_literally: val}; };
-
-// quick helper to reduce typing
-exports.now = function() { return exports.literal('now()'); };
 
 /**
  * run a query, using a pooled connection, and return the result as a finished
@@ -116,6 +115,7 @@ exports.first = function(qry, query_data, options) {
 exports.by_id = function(table, id, options) {
 	options || (options = {});
 	var fields = options.fields || ['*'];
+
 	var qry_fields = fields.map(clean);
 	return exports.first('SELECT '+qry_fields.join(',')+' FROM '+clean(table)+' WHERE id = {{id}} LIMIT 1', {id: id});
 };
@@ -126,6 +126,8 @@ exports.by_id = function(table, id, options) {
 exports.by_ids = function(table, ids, options) {
 	options || (options = {});
 	var fields = options.fields || ['*'];
+	var id_field = options.id_field || 'id';
+
 	var id_data = {};
 	var qry_ids = [];
 	ids.forEach(function(id, i) {
@@ -133,7 +135,7 @@ exports.by_ids = function(table, ids, options) {
 		qry_ids.push('{{--id-'+i+'}}')
 	});
 	var qry_fields = fields.map(clean);
-	return exports.query('SELECT '+qry_fields.join(',')+' FROM '+clean(table)+' WHERE id IN ( '+qry_ids.join(',')+' )', id_data);
+	return exports.query('SELECT '+qry_fields.join(',')+' FROM '+clean(table)+' WHERE '+clean(id_field)+' IN ( '+qry_ids.join(',')+' )', id_data);
 };
 
 /**
@@ -165,6 +167,8 @@ var build_insert = function(table, data) {
  * insert and return ALL inserted data. if `data` is a plain old object, then it
  * just does the one insert and returns just one data object. adaptive. smart.
  * stylish. don't leave home without the insert function in your pocket.
+ *
+ * to learn more about this operation, see https://youtu.be/AW-iVH9xIEs?t=1m1s
  */
 exports.insert = function(table, data) {
 	try {
@@ -199,7 +203,7 @@ exports.update = function(table, id, data) {
  * does an upsert and returns the latest version of the object (whether inserted
  * or updated). requires postgres >= 9.5.
  *
- * does not support bulk upserts.
+ * does not support bulk upserts SO EVERYONE STOP FUCKING ASKING ABOUT IT
  */
 exports.upsert = function(table, data, key, options) {
 	options || (options = {});
@@ -219,9 +223,6 @@ exports.upsert = function(table, data, key, options) {
 	var vals = built.vals;
 
 	qry += ' ON CONFLICT ('+clean(key)+') ';
-
-	// NOTE: AL: i'd rather not do a blanket update here if not needed, but pg
-	// only applies RETURNING when the data has changed
 	qry += 'DO UPDATE SET ';
 	qry += keys.map(function(col, i) {
 		var tplvar = '--upsert-var-'+i;

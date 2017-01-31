@@ -1,3 +1,5 @@
+"use strict";
+
 var db = require('../helpers/db');
 var sync_model = require('./sync');
 

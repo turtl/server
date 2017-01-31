@@ -1,3 +1,5 @@
+"use strict";
+
 /**
  * Run a deep clone of any JSON-serializable object herrp
  */

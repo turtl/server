@@ -1,3 +1,5 @@
+"use strict";
+
 var make_err_fn = function(status) {
 	return function(msg) {
 		var err = new Error(msg);

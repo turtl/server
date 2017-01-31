@@ -11,7 +11,9 @@
     "body-parser": "^1.15.2",
     "express": "^4.14.0",
     "js-yaml": "^3.7.0",
+    "mailgun-js": "^0.8.0",
     "method-override": "^2.3.7",
+    "mixpanel": "^0.6.0",
     "morgan": "^1.7.0",
     "pg": "^6.1.2",
     "winston": "^2.3.0"

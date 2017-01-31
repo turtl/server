@@ -12,9 +12,7 @@ exports.route = function(app) {
  */
 var join = function(req, res) {
 	var data = req.body;
-	return model.join(data)
-		.then(tres.send.bind(tres, res))
-		.catch(tres.err.bind(tres, res));
+	tres.wrap(model.join(data));
 };
 
 /**
@@ -30,7 +28,5 @@ var authenticate = function(req, res) {
 var delete_account = function(req, res) {
 	var cur_user_id = req.user.id;
 	var user_id = req.params.user_id;
-	return model.delete(cur_user_id, user_id)
-		.then(tres.send.bind(tres, res))
-		.catch(tres.err.bind(tres, res));
+	tres.wrap(model.delete(cur_user_id, user_id));
 };

@@ -1,3 +1,5 @@
+"use strict";
+
 exports.send = function(res, data, options) {
 	options || (options = {});
 	var status = options.status || 200;
@@ -15,5 +17,11 @@ exports.err = function(res, err, options) {
 		error: {message: err.message}
 	};
 	return res.status(status).send(JSON.stringify(errobj));
+};
+
+exports.wrap = function(res, promise) {
+	return promise
+		.then(exports.send.bind(exports, res))
+		.catch(exports.err.bind(exports, res));
 };
 

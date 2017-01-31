@@ -1,3 +1,5 @@
+"use strict";
+
 var user_model = require('../models/user');
 var tres = require('./tres');
 

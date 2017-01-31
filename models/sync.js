@@ -1,3 +1,5 @@
+"use strict";
+
 var Promise = require('bluebird');
 var db = require('../helpers/db');
 var error = require('../helpers/error');
@@ -180,14 +182,17 @@ var clean_sync_records = function(sync_records) {
  * note that if a space is unshared, we explicitely send back "delete" sync
  * items for EACH member of the space (boards/notes/invites) individually.
  */
-var populate_shares = function(sync_records) {
+var populate_shares = function(user_id, sync_records) {
 	var populated = [];
 	return Promise.each(sync_records, function(sync) {
 		if(sync.type == 'space' && ['share', 'unshare'].indexOf(sync.action) >= 0) {
 			// get all boards/notes from this space
 			var action = sync.action == 'share' ? 'add' : 'delete';
-			return space_model.get_data_tree(sync.item_id)
-				.spread(function(space, boards, notes, invites) {
+			return space_model.user_has_permission(user_id, sync.item_id, space_model.permissions.add_space_invite)
+				.then(function(has_perm) {
+					return space_model.get_data_tree(sync.item_id, {skip_invites: !has_perm});
+				})
+				.spread(function(space, boards, notes) {
 					populated.push(convert_to_sync(space, 'space', action));
 					boards.forEach(function(item) {
 						var sync = convert_to_sync(item, 'board', action);
@@ -195,10 +200,6 @@ var populate_shares = function(sync_records) {
 					});
 					notes.forEach(function(item) {
 						var sync = convert_to_sync(item, 'note', action);
-						populated.push(sync);
-					});
-					invites.forEach(function(item) {
-						var sync = convert_to_sync(item, 'invite', action);
 						populated.push(sync);
 					});
 				});
@@ -229,7 +230,7 @@ exports.sync_from = function(user_id, from_sync_id) {
 			return link_sync_records(sync_records);
 		})
 		.spread(function(sync_records, latest_sync_id) {
-			return populate_shares(sync_records)
+			return populate_shares(user_id, sync_records)
 				.then(function(sync_records) {
 					return clean_sync_records(sync_records);
 				})

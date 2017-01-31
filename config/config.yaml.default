@@ -1,0 +1,35 @@
+---
+server:
+  port: 8181
+
+db:
+  host: '127.0.0.1'
+  port: 5432
+  database: 'turtl'
+  user: 'slappy'
+  password: 'floppy'
+  pool: 24
+
+loglevel: 'debug'
+
+app:
+  emails:
+    noreply: 'Turtl <noreply@yourdomain.com>'
+    invites: 'invites@yourdomain.com'
+  # TODO: replace this with a long, unique value. seriously. write down a dream
+  # you had, or the short story you came up with during your creative writing
+  # class in your freshmen year of college. have fun with it.
+  secure_hash_salt: "Plaque is a figment of the liberal media and the dental industry to scare you into buying useless appliances and pastes. Now, I've read the arguments on both sides and I haven't found any evidence yet to support the need to brush your teeth. Ever."
+
+mailgun:
+  enabled: false
+  key: ''
+  domain: 'mail.yourdomain.com'
+
+analytics:
+  enabled: false
+  mixpanel:
+    token: ''
+    secret: ''
+
+

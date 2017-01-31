@@ -1,8 +1,11 @@
+"use strict";
+
 var db = require('../helpers/db');
 var Promise = require('bluebird');
 var sync_model = require('./sync');
 var vlad = require('../helpers/validator');
 var error = require('../helpers/error');
+var invite_model = require('./invite');
 
 vlad.define('space', {
 	id: {type: vlad.type.client_id, required: true},
@@ -12,10 +15,11 @@ vlad.define('space', {
 });
 
 sync_model.register('space', {
-	add: add,
-	edit: edit,
-	delete: del,
-	link: link,
+	'add': add,
+	'edit': edit,
+	'delete': del,
+	'link': link,
+	'set-owner': set_owner,
 });
 
 // our roles
@@ -33,6 +37,7 @@ var permissions = {
 	delete_space: 'delete-space',
 	set_space_owner: 'set-space-owner',
 	add_space_invite: 'add-space-invite',
+	edit_space_invite: 'edit-space-invite',
 	delete_space_invite: 'delete-space-invite',
 
 	// boards
@@ -93,19 +98,37 @@ exports.permissions_check = function(user_id, space_id, permission) {
 /**
  * populates member data for a set of spaces
  */
-var populate_members = function(spaces) {
+var populate_members = function(spaces, options) {
+	options || (options = {});
+	var skip_invites = options.skip_invites;
+
 	if(spaces.length == 0) return Promise.resolve(spaces);
 	var space_ids = spaces.map(function(s) { return s.id; });
-	return db.query('SELECT * FROM spaces_users WHERE space_id IN ({{space_ids}})', {space_ids: db.literal(space_ids.join(','))})
-		.then(function(space_users) {
+	var invite_promise = skip_invites ?
+		Promise.resolve([]) :
+		invite_model.get_by_spaces_ids(space_ids);
+	var promises = [
+		db.query('SELECT * FROM spaces_users WHERE space_id IN ({{space_ids}})', {space_ids: db.literal(space_ids.join(','))}),
+		invite_promise,
+	];
+	return Promise.all(promises)
+		.spread(function(space_users, space_invites) {
 			var space_idx = {};
 			spaces.forEach(function(space) { space_idx[space.id] = space; });
+
 			space_users.forEach(function(user) {
 				var space = space_idx[user.space_id];
 				if(!space) return;
 				if(!space.data) space.data = {};
 				if(!space.data.members) space.data.members = [];
 				space.data.members.push(user);
+			});
+			space_invites.forEach(function(invite) {
+				var space = space_idx[invite.space_id];
+				if(!space) return;
+				if(!space.data) space.data = {};
+				if(!space.data.members) space.data.invites = [];
+				space.data.invites.push(invite);
 			});
 			return spaces;
 		});
@@ -114,9 +137,13 @@ var populate_members = function(spaces) {
 /**
  * grab a space by id
  */
-var get_by_id = function(space_id) {
+var get_by_id = function(space_id, options) {
+	options || (options = {});
 	return db.by_id('spaces', space_id)
-		.then(function(space) { return space.data; });
+		.then(function(space) {
+			if(options.raw) return space;
+			return space.data;
+		});
 };
 
 /**
@@ -160,12 +187,19 @@ var get_space_user_record = function(user_id, space_id) {
 /**
  * get the data tree for a space (all the boards/notes/invites contained in it).
  */
-exports.get_data_tree = function(space_id) {
+exports.get_data_tree = function(space_id, options) {
+	options || (options = {});
+	var space_promise = get_by_id(space_id, {raw: true})
+		.then(function(space) {
+			return populate_members([space], options);
+		})
+		.then(function(spaces) {
+			return spaces[0].data;
+		});
 	return Promise.all([
-		get_by_id(space_id),
+		space_promise,
 		board_model.get_by_space_id(space_id),
 		note_model.get_by_space_id(space_id),
-		invite_model.get_by_space_id(space_id),
 	])
 };
 
@@ -194,6 +228,18 @@ exports.get_users_owned_spaces = function(user_id, options) {
 					if(sole_owner) return i_am_admin && number_of_admins == 1;
 					else return i_am_admin;
 				});
+		});
+};
+
+/**
+ * return true if a user has a specific permission on a space
+ */
+exports.user_has_permission = function(user_id, space_id, permission) {
+	return get_space_user_record(user_id, space_id)
+		.then(function(space_user) {
+			if(!space_user) return false;
+			var role = space_user.role;
+			return role_permissions[role].indexOf(permission) >= 0;
 		});
 };
 
@@ -243,7 +289,7 @@ var del = function(user_id, space_id) {
 		.then(function(_) {
 			return exports.get_space_user_ids(space_id)
 				.then(function(user_ids) {
-					return sync_model.add_record(user_ids, user_id, 'space', space_id, 'edit')
+					return sync_model.add_record(user_ids, user_id, 'space', space_id, 'delete')
 				});
 		});
 };
@@ -256,5 +302,101 @@ var link = function(ids) {
 		.then(function(items) {
 			return items.map(function(i) { return i.data;});
 		});
+};
+
+var set_owner = function(user_id, data) {
+	var space_id = data.id;
+	var new_user_id = data.user_id;
+	return exports.permissions_check(user_id, space_id, permissions.set_space_owner)
+		.then(function() {
+			return get_by_id(space_id);
+		})
+		.then(function(space) {
+			space.user_id = new_user_id;
+			return db.update('spaces', space_id, {data: db.json(space)});
+		});
+};
+
+/**
+ * Abstracts adding a specific object type to a space. Handles validation,
+ * inthertion uhhhuhuh, permissions checks, and creation of the corresponding
+ * sync records.
+ */
+exports.simple_add = function(sync_type, sync_table, sync_permission, make_item_fn) {
+	return function(user_id, data) {
+		data.user_id = user_id;
+		var data = vlad.validate(sync_type, data);
+		var space_id = data.space_id;
+		return space_model.permissions_check(user_id, space_id, sync_permission)
+			.then(function(_) {
+				return db.insert(sync_table, make_item_fn(data));
+			})
+			.tap(function(item) {
+				return space_model.get_space_user_ids(space_id)
+					.then(function(user_ids) {
+						return sync_model.add_record(user_ids, user_id, sync_type, item.id, 'add');
+					})
+					.then(function(space_ids) {
+						item.sync_ids = sync_ids;
+					});
+			});
+	};
+};
+
+/**
+ * Abstracts editing a specific object type in a space. Handles validation,
+ * updating, permissions checks, and creation of the corresponding sync records.
+ */
+exports.simple_edit = function(sync_type, sync_table, sync_permission, get_by_id, make_item_fn) {
+	return function(user_id, data) {
+		var data = vlad.validate(sync_type, data);
+		return get_by_id(data.id)
+			.then(function(item_data) {
+				// preserve user_id/space_id
+				// And Charlie and I, we go down the sewer. And first thing we
+				// do is to preserve our clothes, we take... take our clothes
+				// off. We get totally naked because you don't want to get wet.
+				// We ball our clothes up. We stick them up some place high.
+				data.user_id = item_data.user_id;
+				data.space_id = item_data.space_id;
+				return space_model.permissions_check(user_id, data.space_id, sync_permission)
+			})
+			.then(function(_) {
+				return db.update(sync_table, data.id, make_item_fn(data));
+			})
+			.tap(function(item) {
+				return space_model.get_space_user_ids(data.space_id)
+					.then(function(user_ids) {
+						return sync_model.add_record(user_ids, user_id, sync_type, item.id, 'edit');
+					})
+					.then(function(sync_ids) {
+						item.sync_ids = sync_ids;
+					});
+			});
+	};
+};
+
+/**
+ * Abstracts deleting a specific object type from a space. Handles permissions,
+ * deletion, and sync record creation.
+ */
+exports.simple_delete = function(sync_type, sync_table, sync_permissions, get_by_id) {
+	return function(user_id, item_id) {
+		var space_id = null;
+		return get_by_id(item_id)
+			.then(function(item_data) {
+				space_id = item_data.space_id;
+				return space_model.permissions_check(user_id, space_id, sync_permissions);
+			})
+			.then(function() {
+				return db.delete(sync_table, item_id);
+			})
+			.then(function() {
+				return space_model.get_space_user_ids(space_id)
+					.then(function(user_ids) {
+						return symc_model.add_record(user_ids, user_id, sync_type, item_id, 'delete');
+					});
+			});
+	};
 };
 

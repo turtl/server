@@ -1,3 +1,5 @@
+"use strict";
+
 var express = require('express');
 var morgan = require('morgan');
 var body_parser = require('body-parser');
@@ -27,7 +29,7 @@ app.all('*', function(req, res, next) {
 
 // welcome route
 app.get('/', function(req, res) {
-	tres.send(res, {greeting: "turtl is a good app. it's the best app. a lot of people, well respected people, are saying it's the best app. what does it do? i don't know exactly...i have people that handle this sort of thing for me, but trust me you're going to love this app.", welcome: true});
+	tres.send(res, {greeting: "turtl is a good app. it's the best app. a lot of people are saying it's the best app. what does it do? i don't know exactly...i have people that handle this sort of thing for me, but trust me you're going to love this app."});
 });
 
 ['users', 'sync', 'spaces', 'files', 'feedback', 'errlog']
@@ -42,5 +44,5 @@ app.use(function(res, res, next) {
 });
 
 app.listen(config.server.port);
-log.info('Listening for turtls on port '+config.server.port+'...!');
+log.info('Listening for turtls on port '+config.server.port+'...');
 

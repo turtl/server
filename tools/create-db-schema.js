@@ -1,3 +1,11 @@
+/**
+ * This file defines (and creates) our database schema.
+ *
+ * NOTE: we make liberal use of the text type because in postgres there's no
+ * difference between varchar and text under the hood, but varchar can be
+ * excessively limiting and hard to change later on.
+ */
+
 var db = require('../helpers/db');
 var config = require('../helpers/config');
 var Promise = require('bluebird');
@@ -5,7 +13,7 @@ var Promise = require('bluebird');
 var schema_version = 1;
 
 var run_upgrade = function(from_version, to_version) {
-	// TODO?
+	// TODO? or just get it right the first time...
 };
 
 var schema = [];
@@ -19,6 +27,7 @@ var builder = {
 		json: 'jsonb',
 		date: 'timestamp',
 		varchar: function(chars) { return 'varchar('+chars+')'; },
+		text: 'text',
 		bool: 'boolean',
 		smallint: 'smallint',
 	},
@@ -53,7 +62,7 @@ var ty = builder.type;
 builder.table('app', {
 	fields: {
 		id: ty.pk,
-		val: ty.varchar(256),
+		val: ty.text,
 	},
 });
 
@@ -73,12 +82,14 @@ builder.table('spaces_invites', {
 		id: ty.pk,
 		space_id: ty.id,
 		from_user_id: ty.id_int,
-		to_user: ty.varchar(256),
+		to_user: ty.text,
+		token: ty.text,
 		data: ty.json,
 	},
 	indexes: [
 		{name: 'from_user_id', fields: ['from_user_id']},
 		{name: 'to_user', fields: ['to_user']},
+		{name: 'token', fields: ['token']},
 	],
 });
 
@@ -127,7 +138,7 @@ builder.table('sync', {
 	fields: {
 		id: ty.pk_int,
 		item_id: ty.id,
-		type: ty.varchar(24),
+		type: ty.text,
 		user_id: ty.id_int,
 	},
 });
@@ -146,13 +157,15 @@ builder.table('sync_users', {
 builder.table('users', {
 	fields: {
 		id: ty.pk_int,
-		username: builder.not_null(ty.varchar(64)),
-		auth: ty.varchar(256),
+		username: builder.not_null(ty.text),
+		auth: ty.text,
+		confirmed: ty.bool,
 		data: ty.json,
 		storage_mb: ty.int,
 	},
 	indexes: [
-		// NOTE: no `auth` index...pull out by username, do double-hmac compare on auth
+		// NOTE: no `auth` index...pull out by username, do double-hmac compare
+		// on auth
 		{name: 'username', fields: ['username'], unique: true},
 	],
 });

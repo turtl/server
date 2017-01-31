@@ -1,3 +1,5 @@
+"use strict";
+
 var db = require('../helpers/db');
 var config = require('../helpers/config');
 var Promise = require('bluebird');
@@ -8,6 +10,14 @@ var space_model = require('./space');
 var board_model = require('./board');
 var note_model = require('./note');
 var invite_model = require('./invite');
+var analytics = require('./analytics');
+var vlad = require('../helpers/validator');
+
+vlad.define('user', {
+	public_key: {type: vlad.type.string},
+	name: {type: vlad.type.string},
+	body: {type: vlad.type.string},
+});
 
 sync_model.register('user', {
 	edit: edit,
@@ -15,7 +25,7 @@ sync_model.register('user', {
 });
 
 /**
- * does a pbkdf2 on our private data using the app's SECRET hash
+ * do a pbkdf2 on our private data using the app's SECRET hash
  */
 var secure_hash = function(privatedata, options) {
 	options || (options = {});
@@ -25,9 +35,12 @@ var secure_hash = function(privatedata, options) {
 	var res = crypto.pbkdf2Sync(privatedata, config.app.secure_hash_salt, iter, 128, 'sha256');
 	return res.toString(output);
 };
+exports.secure_hash = secure_hash;
 
 /**
  * who needs constant-time comparisons when you can just double-hmac?
+ *
+ * find out why this one app has password crackers FURIOUS!!!
  */
 var secure_compare = function(secret1, secret2) {
 	var now = new Date().getTime();
@@ -36,6 +49,23 @@ var secure_compare = function(secret1, secret2) {
 	return hmac1 == hmac2;
 };
 
+/**
+ * create a random token. useful for creating values the server knows that users
+ * do not (invite tokens et al).
+ */
+var random_token = function() {
+	var read_it_back_francine = 'and if you ever put your goddamn hands on my wife again, i will...';
+	var rand = crypto.randomBytes(64).toString('hex');
+	return crypto
+		.createHash('sha256')
+		.update(rand+read_it_back_francine+(new Date().getTime()))
+		.digest('hex');
+};
+exports.random_token = random_token;
+
+/**
+ * remove any sensitive data from a user object
+ */
 var clean_user = function(user) {
 	delete user.auth;
 	return user;
@@ -60,6 +90,7 @@ exports.check_auth = function(authinfo) {
 exports.join = function(userdata) {
 	if(!userdata.auth) return Promise.reject(error.bad_request('missing `auth` key'));
 	if(!userdata.username) return Promise.reject(error.bad_request('missing `username` key (should be a valid email)'));
+	vlad.validate('user', userdata.data || {});
 
 	// check existing username
 	return db.first('SELECT id FROM users WHERE username = {{username}} LIMIT 1', {username: userdata.username})
@@ -79,6 +110,16 @@ exports.join = function(userdata) {
 				storage_mb: 100
 			});
 		})
+		.tap(function(user) {
+			return analytics.join(user.id, {
+				$distinct_id: user.id,
+				$email: user.username,
+				$name: (user.data || {}).name,
+			});
+		})
+		.tap(function(user) {
+			return analytics.track(user.id, 'user-join');
+		})
 		.then(clean_user);
 };
 
@@ -92,8 +133,19 @@ exports.delete = function(cur_user_id, user_id) {
 		});
 };
 
+exports.get_by_id = function(user_id) {
+	return db.by_id('users', user_id)
+		.then(clean_user);
+};
+
+exports.get_by_email = function(email) {
+	return db.first('SELECT * FROM users WHERE username = {{email}} LIMIT 1', {email: email})
+		.then(clean_user);
+};
+
 var edit = function(user_id, data) {
 	if(user_id != data.id) return Promise.reject(error.forbidden('you cannot edit someone else\'s user record. shame shame.'));
+	var data = vlad.validate('user', data);
 	return db.update('users', user_id, {data: data})
 		.tap(function(user) {
 			return sync_model.add_record([], user_id, 'user', user_id, 'edit')

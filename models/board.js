@@ -1,3 +1,5 @@
+"use strict";
+
 var db = require('../helpers/db');
 var sync_model = require('./sync');
 var space_model = require('./space');
@@ -34,51 +36,33 @@ exports.get_by_space_id = function(space_id) {
 		});
 };
 
-var add = function(user_id, data) {
-	data.user_id = user_id;
-	var data = vlad.validate('board', data);
-	var space_id = data.space_id;
-	return space_model.permissions_check(user_id, space_id, permissions.add_board)
-		.then(function(_) {
-			return db.insert('boards', {id: data.id, space_id: space_id, data: data});
-		})
-		.tap(function(board) {
-			return space_model.get_space_user_ids(space_id)
-				.then(function(user_ids) {
-					return sync_model.add_record(user_ids, user_id, 'board', board.id, 'add');
-				})
-				.then(function(space_ids) {
-					board.sync_ids = sync_ids;
-				});
-		});
-};
+var add = space_model.simple_add(
+	'board',
+	'boards',
+	space_model.permissions.add_board,
+	get_by_id,
+	function(data) { return {id: data.id, space_id: space_id, data: db.json(data)}; }
+);
 
-var edit = function(user_id, data) {
-	var data = vlad.validate('board', data);
-	return get_by_id(data.id)
-		.then(function(board_data) {
-			// preserve user_id/space_id
-			data.user_id = board_data.user_id;
-			data.space_id = board_data.space_id;
-			return space_model.permissions_check(user_id, old_space_id, permissions.edit_board)
-		})
-		.then(function(_) {
-			return db.update('boards', data.id, {space_id: space_id, data: data});
-		})
-		.tap(function(board) {
-			return space_model.get_space_user_ids(old_space_id)
-				.then(function(user_ids) {
-					return sync_model.add_record(user_ids, user_id, 'board', data.id, 'edit');
-				})
-				.then(function(sync_ids) {
-					board.sync_ids = sync_ids;
-				});
-		});
-};
+var edit = space_model.simple_edit(
+	'board',
+	'boards',
+	space_model.permissions.edit_board,
+	get_by_id,
+	function(data) { return {id: data.id, space_id: space_id, data: db.json(data)}; }
+);
+
+var del = space_model.simple_delete(
+	'board',
+	'boards',
+	space_model.permissions.delete_board,
+	get_by_id
+);
 
 var move_space = function(user_id, data) {
 	var data = vlad.validate('board', data);
-	return get_by_id(data.id)
+	var board_id = data.id;
+	return get_by_id(board_id)
 		.then(function(board_data) {
 			var old_space_id = board_data.space_id;
 			var new_space_id = data.space_id;
@@ -88,24 +72,31 @@ var move_space = function(user_id, data) {
 			}
 			return Promise.all([
 				board_data,
+				new_space_id,
 				space_model.permissions_check(user_id, old_space_id, permissions.delete_board),
 				space_model.permissions_check(user_id, new_space_id, permissions.add_board),
 			]);
 		})
-		.spread(function(board_data) {
+		.spread(function(board_data, new_space_id) {
+			board_data.space_id = new_space_id;
+			var update = {
+				space_id: new_space_id,
+				data: board_data,
+			};
 			return Promise.all([
-				board_data,
+				db.update('boards', board_id, update),
 				space_model.get_space_user_ids(old_space_id)
 					.then(function(user_ids) {
-						return sync_model.add_record(user_ids, user_id, 'board', data.id, 'delete');
+						return sync_model.add_record(user_ids, user_id, 'board', board_id, 'delete');
 					}),
 				space_model.get_space_user_ids(new_space_id)
 					.then(function(user_ids) {
-						return sync_model.add_record(user_ids, user_id, 'board', data.id, 'add');
+						return sync_model.add_record(user_ids, user_id, 'board', board_id, 'add');
 					}),
 			]);
 		})
-		.spread(function(board_data, old_sync_ids, new_sync_ids) {
+		.spread(function(board, old_sync_ids, new_sync_ids) {
+			var board_data = board.data;
 			var sync_ids = old_sync_ids.concat(new_sync_ids);
 			board_data.sync_ids = sync_ids;
 			return board_data;
@@ -114,24 +105,6 @@ var move_space = function(user_id, data) {
 			var board = err.board;
 			board.sync_ids = [];
 			return board;
-		});
-};
-
-var del = function(user_id, board_id) {
-	var space_id = null;
-	return get_by_id(board_id)
-		.then(function(board_data) {
-			space_id = board_data.space_id;
-			return space_model.permissions_check(user_id, space_id, permissions.delete_board);
-		})
-		.then(function() {
-			return db.delete('boards', board_id);
-		})
-		.then(function() {
-			return space_model.get_space_user_ids(space_id)
-				.then(function(user_ids) {
-					return symc_model.add_record(user_ids, user_id, 'board', board_id, 'delete');
-				});
 		});
 };
 
