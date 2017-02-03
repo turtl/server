@@ -11,6 +11,7 @@ var analytics = require('./analytics');
 vlad.define('note', {
 	id: {type: vlad.type.client_id, required: true},
 	space_id: {type: vlad.type.client_id, required: true},
+	board_id: {type: vlad.type.client_id, required: true},
 	user_id: {type: vlad.type.int, required: true},
 	has_file: {type: vlad.type.bool, default: false},
 	file: {type: vlad.type.vlad('note-file')},
