@@ -88,7 +88,8 @@ exports.check_auth = function(authinfo) {
 
 exports.join = function(userdata) {
 	if(!userdata.auth) return Promise.reject(error.bad_request('missing `auth` key'));
-	if(!userdata.username) return Promise.reject(error.bad_request('missing `username` key (should be a valid email)'));
+	if(!userdata.username) return Promise.reject(error.bad_request('missing `username` key (must be a valid email)'));
+	if(!userdata.salt) return Promise.reject(error.bad_request('missing `salt` key (must be a hex-encoded 128-bit value)'));
 	var data = vlad.validate('user', userdata.data || {});
 
 	// create a confirmation token
@@ -109,6 +110,7 @@ exports.join = function(userdata) {
 			return db.insert('users', {
 				username: userdata.username,
 				auth: auth,
+				salt: userdata.salt,
 				confirmed: false,
 				data: db.json(userdata.data),
 				storage_mb: 100
