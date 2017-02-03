@@ -39,6 +39,11 @@ var clean = function(invite) {
 	return invite;
 };
 
+var delete_invite = function(space_id, invite_id) {
+	var qry = 'DELETE FROM invites WHERE invite_id = {{invite_id}} AND space_id = {{space_id}}';
+	return db.query(qry, {invite_id: invite_id, space_id: space_id});
+};
+
 var create_outgoing_invite_sync_record = function(user_id, space_id, invite_id, action) {
 	return get_by_id(space_id, invite_id)
 		.then(function(invite) {
@@ -55,6 +60,17 @@ var create_outgoing_invite_sync_record = function(user_id, space_id, invite_id, 
 		});
 };
 
+exports.create_sync_records_for_email = function(user_id, email) {
+	var qry = 'SELECT * FROM spaces_invites WHERE to_user = {{email}}';
+	return db.query(qry, {email: email})
+		.then(function(invites) {
+			if(!invites || !invites.length) return [];
+			return Promise.all(invites.map(function(invite) {
+				return sync_model.add_record([user_id], user_id, 'invite', invite.id, 'add');
+			}));
+		});
+};
+
 exports.send = function(user_id, to_user_email, space_id, data) {
 	var invite;
 	var data = vlad.validate('invite', data);
@@ -67,14 +83,9 @@ exports.send = function(user_id, to_user_email, space_id, data) {
 			// don't re-create an existing invite. skip it, don't email, etc etc
 			if(exists) throw {already_exists: exists};
 
-			// create a random token for our invite. brute forcers HATE this one
-			// simple trick!!!
-			var token = user_model.random_token();
-
 			return db.insert('spaces_invites', {
 				from_user_id: user_id,
 				to_user: to_user_email,
-				token: token,
 				data: db.json(data),
 			});
 		})
@@ -100,10 +111,9 @@ exports.send = function(user_id, to_user_email, space_id, data) {
 			} else {
 				action = [
 					'To accept this invite, download Turtl (https://turtlapp.com/download/)',
-					'and create a new account using this email.\n\n',
-					'\n\nIf you already have an account, you can add this email ('+to_user_email+')',
-					'as an alias to your account by logging in, opening the',
-					'Turtl menu, going to Your settings -> Aliases.',
+					'and create a new account using this email.',
+					'\n\nIf you already have an existing account, you can ask '+name,
+					'to re-invite you on your existing email.',
 					'\n\nIf you don\'t care about any of this, feel free to',
 					'ignore this message. Nothing good or bad will happen.',
 				].join(' ');
@@ -120,8 +130,9 @@ exports.send = function(user_id, to_user_email, space_id, data) {
 				.then(function() { return to_user; });
 		})
 		.then(function(to_user) {
-			analytics.track(user_id, 'space-invite', {
+			analytics.track(user_id, 'space.invite-send', {
 				space_id: space_id,
+				from: user_id,
 				to: to_user_email,
 				role: data.role,
 				has_password: data.has_password,
@@ -147,6 +158,42 @@ exports.send = function(user_id, to_user_email, space_id, data) {
 			var inv = err.already_exists.data;
 			inv.sync_ids = [];
 			return inv;
+		});
+};
+
+exports.accept = function(user_id, space_id, invite_id) {
+	return get_by_id(space_id, invite_id)
+		.tap(function(invite) {
+			if(!invite) throw error.not_found('that invite doesn\'t exist');
+			return user_model.get_by_id(user_id)
+				.tap(function(user) {
+					if(user.username != invite.to_user) throw error.forbidden('that invite wasn\'t sent to your email ('+user.username+')');
+				});
+		})
+		.tap(function(invite) {
+			return space_model.create_space_user_record(space_id, user_id, invite.data.role);
+		})
+		.tap(function(invite) {
+			return delete_invite(space_id, invite_id);
+		})
+		.tap(function(invite) {
+			return space_model.get_space_user_ids(space_id)
+				.then(function(space_users) {
+					return Promise.all([
+						sync_model.add_record([user_id], user_id, 'space', space_id, 'share'),
+						sync_model.add_record(space_users, user_id, 'space', space_id, 'edit'),
+					]);
+				});
+		})
+		.then(function(invite) {
+			analytics.track(user_id, 'space.invite-accept', {
+				space_id: space_id,
+				from: invite.from_user_id,
+				to: invite.to_user,
+				role: invite.data.role,
+				has_password: data.has_password,
+			});
+			return {accepted: true};
 		});
 };
 
@@ -182,8 +229,10 @@ exports.update = function(user_id, space_id, invite_id, data) {
 exports.delete = function(user_id, space_id, invite_id) {
 	return space_model.permissions_check(user_id, space_id, space_model.permissions.delete_space_invite)
 		.then(function() {
-			var qry = 'DELETE FROM invites WHERE invite_id = {{invite_id}} AND space_id = {{space_id}}';
-			return db.query(qry, {invite_id: invite_id, space_id: space_id});
+			return delete_invite(space_id, invite_id);
+		})
+		.tap(function() {
+			analytics.track('space.invite-delete', {space_id: space_id});
 		});
 };
 
@@ -204,4 +253,15 @@ exports.get_by_spaces_ids = function(space_ids) {
 	return db.by_ids('spaces_invites', space_ids, {id_field: 'space_id'})
 		.map(clean);
 };
+
+var link = function(ids) {
+	return db.by_ids('invites', ids, {fields: ['data']})
+		.then(function(items) {
+			return items.map(function(i) { return i.data;});
+		});
+};
+
+sync_model.register('invite', {
+	link: link,
+});
 

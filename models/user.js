@@ -4,6 +4,7 @@ var db = require('../helpers/db');
 var config = require('../helpers/config');
 var Promise = require('bluebird');
 var error = require('../helpers/error');
+var vlad = require('../helpers/validator');
 var crypto = require('crypto');
 var sync_model = require('./sync');
 var space_model = require('./space');
@@ -11,17 +12,12 @@ var board_model = require('./board');
 var note_model = require('./note');
 var invite_model = require('./invite');
 var analytics = require('./analytics');
-var vlad = require('../helpers/validator');
+var email_model = require('./email');
 
 vlad.define('user', {
 	public_key: {type: vlad.type.string},
 	name: {type: vlad.type.string},
 	body: {type: vlad.type.string},
-});
-
-sync_model.register('user', {
-	edit: edit,
-	link: link,
 });
 
 /**
@@ -53,11 +49,14 @@ var secure_compare = function(secret1, secret2) {
  * create a random token. useful for creating values the server knows that users
  * do not (invite tokens et al).
  */
-var random_token = function() {
+var random_token = function(options) {
+	options || (options = {});
+	var hash = options.hash || 'sha256';
+
 	var read_it_back_francine = 'and if you ever put your goddamn hands on my wife again, i will...';
 	var rand = crypto.randomBytes(64).toString('hex');
 	return crypto
-		.createHash('sha256')
+		.createHash(hash)
 		.update(rand+read_it_back_francine+(new Date().getTime()))
 		.digest('hex');
 };
@@ -90,7 +89,11 @@ exports.check_auth = function(authinfo) {
 exports.join = function(userdata) {
 	if(!userdata.auth) return Promise.reject(error.bad_request('missing `auth` key'));
 	if(!userdata.username) return Promise.reject(error.bad_request('missing `username` key (should be a valid email)'));
-	vlad.validate('user', userdata.data || {});
+	var data = vlad.validate('user', userdata.data || {});
+
+	// create a confirmation token
+	var token = random_token({hash: 'sha512'});
+	data.confirmation_token = token;
 
 	// check existing username
 	return db.first('SELECT id FROM users WHERE username = {{username}} LIMIT 1', {username: userdata.username})
@@ -106,9 +109,27 @@ exports.join = function(userdata) {
 			return db.insert('users', {
 				username: userdata.username,
 				auth: auth,
+				confirmed: false,
 				data: db.json(userdata.data),
 				storage_mb: 100
 			});
+		})
+		.tap(function(user) {
+			var subject = 'Welcome to Turtl! Please confirm your email';
+			var confirmation_url = config.app.api_url+'/users/confirm/'+encodeURIComponent(user.username)+'/'+encodeURIComponent(token);
+			var body = [
+				'Welcome to Turtl! Your account is active and you\'re ready to start using the app.',
+				'',
+				'However, sharing is disabled on your account until you confirm your email by going here:',
+				'',
+				'  '+confirmation_url,
+				'',
+				'You can resend this confirmation email at any time through the app by opening the Turtl menu and going to Your settings -> Resend confirmation',
+				'',
+				'Thanks!',
+				'- Turtl team',
+			].join('\n');
+			return email_model.send(config.app.emails.info, user.username, subject, body);
 		})
 		.tap(function(user) {
 			return analytics.join(user.id, {
@@ -118,7 +139,31 @@ exports.join = function(userdata) {
 			});
 		})
 		.tap(function(user) {
-			return analytics.track(user.id, 'user-join');
+			return analytics.track(user.id, 'user.join');
+		})
+		.then(clean_user);
+};
+
+exports.confirm_user = function(email, token) {
+	return exports.get_by_email(email)
+		.then(function(user) {
+			if(!user) throw error.not_found('that email isn\'t attached to an active account');
+			var data = user.data || {};
+			if(user.confirmed) throw error.conflict('that account has already been confirmed');
+			var server_token = data.confirmation_token;
+			if(!server_token) throw error.internal('that account has no confirmation token');
+			if(!secure_compare(token, server_token)) throw error.bad_request('invalid confirmation token');
+			delete data.confirmation_token;
+			return db.update('users', user.id, {confirmed: true, data: data});
+		})
+		.tap(function(user) {
+			return sync_model.add_record([user.id], user.id, 'user', user.id, 'edit');
+		})
+		.tap(function(user) {
+			// if thre are pending invites sent to the email that was just
+			// confirmed, we create invite.add sync records for them so the user
+			// sees them in their profile.
+			return invite_model.create_sync_records_for_email(user.id, email);
 		})
 		.then(clean_user);
 };
@@ -128,7 +173,9 @@ exports.delete = function(cur_user_id, user_id) {
 
 	return space_model.get_users_owned_spaces(user_id, {sole_owner: true})
 		.then(function(my_spaces) {
-			// TODO
+			// TODO: remove owned spaces (and data in said spaces)
+			// TODO: force setting owner if shared spaces?
+			// TODO: analytics track user.delete
 			throw new Error('unimplemented');
 		});
 };
@@ -158,7 +205,16 @@ var edit = function(user_id, data) {
 var link = function(ids) {
 	return db.by_ids('users', ids, {fields: ['data']})
 		.then(function(items) {
-			return items.map(function(i) { return i.data;});
+			return items.map(function(i) {
+				var data = i.data || {};
+				data.confirmed = !!i.confirmed;
+				return data;
+			});
 		});
 };
+
+sync_model.register('user', {
+	edit: edit,
+	link: link,
+});
 

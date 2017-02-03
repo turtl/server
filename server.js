@@ -39,7 +39,7 @@ app.get('/', function(req, res) {
 	});
 
 // catch all
-app.use(function(res, res, next) {
+app.use(function(req, res, next) {
 	tres.err(res, error.not_found('resource not found'));
 });
 

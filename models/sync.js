@@ -5,6 +5,7 @@ var db = require('../helpers/db');
 var error = require('../helpers/error');
 var analytics = require('./analytics');
 var util = require('../helpers/util');
+var log = require('../helpers/log');
 
 // holds our sync mappings. models will register themselves to the sync system
 // via the `register()` call
@@ -54,16 +55,17 @@ var convert_to_sync = function(item, type, action) {
  * various clients share data with each other.
  */
 exports.add_record = function(affected_user_ids, creator_user_id, type, object_id, action) {
+	if(affected_user_ids.length == 0) return Promise.reject(error.internal('empty user array passed to sync.add_record (shame, shame)'));
 	affected_user_ids = util.dedupe(affected_user_ids);
 	var sync_rec = make_sync_record(creator_user_id, type, object_id, action);
 	return db.insert('sync', sync_rec)
 		.tap(function(sync) {
-			return db.insert(affected_user_ids.map(function(user_id) {
+			return db.insert('sync_users', affected_user_ids.map(function(user_id) {
 				return {sync_id: sync.id, user_id: user_id};
 			}));
 		})
 		.then(function(sync) {
-			return [sync_id];
+			return [sync.id];
 		});
 };
 
@@ -213,6 +215,7 @@ var populate_shares = function(user_id, sync_records) {
  * Grab all the sync records for a user id AFTER the given sync id.
  */
 exports.sync_from = function(user_id, from_sync_id) {
+	if(!from_sync_id) return Promise.reject(error.bad_request('missing `sync_id` var'));
 	var qry = [
 		'SELECT',
 		'	s.*',
@@ -220,12 +223,12 @@ exports.sync_from = function(user_id, from_sync_id) {
 		'	sync s, sync_users su',
 		'WHERE',
 		'	s.id = su.sync_id AND',
-		'	su.user_id = {{user_id}}',
+		'	su.user_id = {{user_id}} AND',
 		'	s.id > {{sync_id}}',
 		'ORDER BY',
 		'	s.id ASC',
 	].join('\n');
-	return db.query(qry, {user_id: user_id, sync_id: sync_id})
+	return db.query(qry, {user_id: user_id, sync_id: from_sync_id})
 		.then(function(sync_records) {
 			return link_sync_records(sync_records);
 		})
@@ -302,7 +305,13 @@ exports.bulk_sync = function(user_id, sync_records) {
 					data: item,
 				});
 				success_idx[sync._id] = true;
-				return analytics.track(user_id, sync.type+'-'+sync.action);
+				// DON'T return, we don't failed analytics to grind the sync to
+				// a halt
+				analytics.track(user_id, sync.type+'.'+sync.action);
+			})
+			.catch(function(err) {
+				log.error('sync.bulk_sync() -- ', err);
+				throw err;
 			});
 	}).catch(function(err) {
 		fail_err = err;
@@ -314,7 +323,7 @@ exports.bulk_sync = function(user_id, sync_records) {
 			failures: sync_records.filter(function(sync) {
 				return !success_idx[sync._id];
 			}),
-			error: fail_err,
+			error: fail_err && fail_err.message,
 		};
 	});
 };

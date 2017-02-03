@@ -83,13 +83,11 @@ builder.table('spaces_invites', {
 		space_id: ty.id,
 		from_user_id: ty.id_int,
 		to_user: ty.text,
-		token: ty.text,
 		data: ty.json,
 	},
 	indexes: [
 		{name: 'from_user_id', fields: ['from_user_id']},
 		{name: 'to_user', fields: ['to_user']},
-		{name: 'token', fields: ['token']},
 	],
 });
 
@@ -139,6 +137,7 @@ builder.table('sync', {
 		id: ty.pk_int,
 		item_id: ty.id,
 		type: ty.text,
+		action: ty.varchar(32),
 		user_id: ty.id_int,
 	},
 });

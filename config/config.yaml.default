@@ -13,6 +13,9 @@ db:
 loglevel: 'debug'
 
 app:
+  # no trailing slash
+  api_url: 'http://api.yourdomain.com:8181'
+  www_url: 'https://yourdomain.com'
   emails:
     noreply: 'Turtl <noreply@yourdomain.com>'
     invites: 'invites@yourdomain.com'

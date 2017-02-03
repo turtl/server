@@ -1,0 +1,8 @@
+#!/bin/bash
+
+curl \
+	-s \
+	-H 'Content-Type: application/json' \
+	-H "Authorization: Basic YW5kcmV3QGx5b25icm9zLmNvbTpnZXRham9i" \
+	"$@"
+

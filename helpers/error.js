@@ -4,6 +4,7 @@ var make_err_fn = function(status) {
 	return function(msg) {
 		var err = new Error(msg);
 		err.status = status;
+		err.app_error = true;
 		return err;
 	};
 };

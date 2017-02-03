@@ -13,14 +13,6 @@ vlad.define('board', {
 	body: {type: vlad.type.string},
 });
 
-sync_model.register('board', {
-	'add': add,
-	'edit': edit,
-	'delete': del,
-	'move-space': move_space,
-	'link': link,
-});
-
 /**
  * get a board's data by id
  */
@@ -40,8 +32,7 @@ var add = space_model.simple_add(
 	'board',
 	'boards',
 	space_model.permissions.add_board,
-	get_by_id,
-	function(data) { return {id: data.id, space_id: space_id, data: db.json(data)}; }
+	function(data) { return {id: data.id, space_id: data.space_id, data: db.json(data)}; }
 );
 
 var edit = space_model.simple_edit(
@@ -49,7 +40,7 @@ var edit = space_model.simple_edit(
 	'boards',
 	space_model.permissions.edit_board,
 	get_by_id,
-	function(data) { return {id: data.id, space_id: space_id, data: db.json(data)}; }
+	function(data) { return {id: data.id, space_id: data.space_id, data: db.json(data)}; }
 );
 
 var del = space_model.simple_delete(
@@ -114,4 +105,12 @@ var link = function(ids) {
 			return items.map(function(i) { return i.data;});
 		});
 };
+
+sync_model.register('board', {
+	'add': add,
+	'edit': edit,
+	'delete': del,
+	'move-space': move_space,
+	'link': link,
+});
 

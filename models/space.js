@@ -10,16 +10,7 @@ var invite_model = require('./invite');
 vlad.define('space', {
 	id: {type: vlad.type.client_id, required: true},
 	user_id: {type: vlad.type.int, required: true},
-	keys: {type: vlad.type.array},
 	body: {type: vlad.type.string},
-});
-
-sync_model.register('space', {
-	'add': add,
-	'edit': edit,
-	'delete': del,
-	'link': link,
-	'set-owner': set_owner,
 });
 
 // our roles
@@ -82,7 +73,9 @@ exports.permissions = permissions;
 exports.roles = roles;
 
 /**
- * make sure the given user has the ability to perform the given action.
+ * make sure the given user has the ability to perform the given action. this
+ * function throws a forbidden error if the user doesn't have access. if you
+ * want a boolean yes/no, see user_has_permission()
  */
 exports.permissions_check = function(user_id, space_id, permission) {
 	return get_space_user_record(user_id, space_id)
@@ -93,6 +86,29 @@ exports.permissions_check = function(user_id, space_id, permission) {
 			if(permissions.indexOf(permission) >= 0) return true;
 			throw error.forbidden('you don\'t have `'+permission+'` permissions on space '+space_id);
 		});
+};
+
+/**
+ * wraps permissions_check, and catches errors to return a boolean true/false
+ */
+exports.user_has_permission = function(user_id, space_id, permission) {
+	return exports.permissions_check(user_id, space_id, permission)
+		.then(function() {
+			return true;
+		})
+		// catch `forbidden` errors and return false
+		.catch(function(err) { return err.status == 403 && err.app_error === true; }, function(err) {
+			return false;
+		});
+};
+
+/**
+ * does this user have any kind of access to this space? anyone who has access
+ * to the space can READ anything in the space, regardless of permissions (ie,
+ * guest permissions).
+ */
+exports.user_is_in_space = function(user_id, space_id) {
+	return get_space_user_record(user_id, space_id);
 };
 
 /**
@@ -152,7 +168,8 @@ var get_by_id = function(space_id, options) {
  * this is GREAT for generating sync records for boards/notes/invites
  */
 exports.get_space_user_ids = function(space_id) {
-	return db.query('SELECT user_id FROM spaces_users WHERE space_id = {{space_id}}')
+	var qry = 'SELECT user_id FROM spaces_users WHERE space_id = {{space_id}}';
+	return db.query(qry, {space_id: space_id})
 		.then(function(res) {
 			return res.map(function(rec) { return rec.user_id; });
 		});
@@ -174,6 +191,10 @@ exports.get_by_user_id = function(user_id) {
 	].join('\n');
 	return db.query(qry, {uid: user_id})
 		.then(populate_members);
+};
+
+exports.create_space_user_record = function(space_id, user_id, role) {
+	return db.insert('spaces_users', {space_id: space_id, user_id: user_id, role: role});
 };
 
 /**
@@ -231,24 +252,12 @@ exports.get_users_owned_spaces = function(user_id, options) {
 		});
 };
 
-/**
- * return true if a user has a specific permission on a space
- */
-exports.user_has_permission = function(user_id, space_id, permission) {
-	return get_space_user_record(user_id, space_id)
-		.then(function(space_user) {
-			if(!space_user) return false;
-			var role = space_user.role;
-			return role_permissions[role].indexOf(permission) >= 0;
-		});
-};
-
 var add = function(user_id, data) {
 	data.user_id = user_id;
 	var data = vlad.validate('space', data);
 	return db.insert('spaces', {id: data.id, data: data})
 		.tap(function(space) {
-			return db.insert('spaces_users', {space_id: space.id, user_id: user_id, permissions: roles.owner});
+			return exports.create_space_user_record(space.id, user_id, roles.owner);
 		})
 		.tap(function(space) {
 			return sync_model.add_record([user_id], user_id, 'space', space.id, 'add')
@@ -327,12 +336,12 @@ exports.simple_add = function(sync_type, sync_table, sync_permission, make_item_
 		data.user_id = user_id;
 		var data = vlad.validate(sync_type, data);
 		var space_id = data.space_id;
-		return space_model.permissions_check(user_id, space_id, sync_permission)
+		return exports.permissions_check(user_id, space_id, sync_permission)
 			.then(function(_) {
 				return db.insert(sync_table, make_item_fn(data));
 			})
 			.tap(function(item) {
-				return space_model.get_space_user_ids(space_id)
+				return exports.get_space_user_ids(space_id)
 					.then(function(user_ids) {
 						return sync_model.add_record(user_ids, user_id, sync_type, item.id, 'add');
 					})
@@ -359,13 +368,13 @@ exports.simple_edit = function(sync_type, sync_table, sync_permission, get_by_id
 				// We ball our clothes up. We stick them up some place high.
 				data.user_id = item_data.user_id;
 				data.space_id = item_data.space_id;
-				return space_model.permissions_check(user_id, data.space_id, sync_permission)
+				return exports.permissions_check(user_id, data.space_id, sync_permission)
 			})
 			.then(function(_) {
 				return db.update(sync_table, data.id, make_item_fn(data));
 			})
 			.tap(function(item) {
-				return space_model.get_space_user_ids(data.space_id)
+				return exports.get_space_user_ids(data.space_id)
 					.then(function(user_ids) {
 						return sync_model.add_record(user_ids, user_id, sync_type, item.id, 'edit');
 					})
@@ -386,17 +395,25 @@ exports.simple_delete = function(sync_type, sync_table, sync_permissions, get_by
 		return get_by_id(item_id)
 			.then(function(item_data) {
 				space_id = item_data.space_id;
-				return space_model.permissions_check(user_id, space_id, sync_permissions);
+				return exports.permissions_check(user_id, space_id, sync_permissions);
 			})
 			.then(function() {
 				return db.delete(sync_table, item_id);
 			})
 			.then(function() {
-				return space_model.get_space_user_ids(space_id)
+				return exports.get_space_user_ids(space_id)
 					.then(function(user_ids) {
 						return symc_model.add_record(user_ids, user_id, sync_type, item_id, 'delete');
 					});
 			});
 	};
 };
+
+sync_model.register('space', {
+	'add': add,
+	'edit': edit,
+	'delete': del,
+	'link': link,
+	'set-owner': set_owner,
+});
 

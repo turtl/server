@@ -1,21 +1,23 @@
 {
   "name": "turtl-server",
   "version": "0.1.0",
-  "description": "Turtl's (Node-based) API",
+  "description": "Turtl's node-based API server (sorry, lisp)",
   "author": "Andrew Lyon",
   "license": "AGPL-3.0",
   "repository": "https://github.com/turtl/server",
   "main": "server.js",
   "dependencies": {
-    "bluebird": "^3.4.7",
-    "body-parser": "^1.15.2",
-    "express": "^4.14.0",
-    "js-yaml": "^3.7.0",
-    "mailgun-js": "^0.8.0",
-    "method-override": "^2.3.7",
-    "mixpanel": "^0.6.0",
-    "morgan": "^1.7.0",
-    "pg": "^6.1.2",
-    "winston": "^2.3.0"
+    "aws-sdk": "2.9.0",
+    "bluebird": "3.4.7",
+    "body-parser": "1.15.2",
+    "express": "4.14.0",
+    "js-yaml": "3.7.0",
+    "mailgun-js": "0.8.0",
+    "method-override": "2.3.7",
+    "mixpanel": "0.6.0",
+    "morgan": "1.7.0",
+    "pg": "6.1.2",
+    "s3-upload-stream": "^1.0.7",
+    "winston": "2.3.0"
   }
 }

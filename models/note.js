@@ -2,6 +2,155 @@
 
 var db = require('../helpers/db');
 var sync_model = require('./sync');
+var vlad = require('../helpers/validator');
+var error = require('../helpers/error');
+var space_model = require('./space');
+var file_model = require('./file');
+var analytics = require('./analytics');
+
+vlad.define('note', {
+	id: {type: vlad.type.client_id, required: true},
+	space_id: {type: vlad.type.client_id, required: true},
+	user_id: {type: vlad.type.int, required: true},
+	has_file: {type: vlad.type.bool, default: false},
+	file: {type: vlad.type.vlad('note-file')},
+	mod: {type: vlad.type.int},
+	keys: {type: vlad.type.array},
+	body: {type: vlad.type.string},
+});
+
+vlad.define('note-file', {
+	id: {type: vlad.type.string, required: true},
+	size: {type: vlad.type.int},
+	body: {type: vlad.type.string},
+});
+
+/**
+ * get a note's data by id
+ */
+var get_by_id = function(note_id) {
+	return db.by_id('notes', note_id)
+		.then(function(note) { return note.data; });
+};
+
+exports.get_by_space_id = function(space_id) {
+	return db.query('SELECT data FROM notes WHERE space_id = {{space_id}}', {space_id: space_id})
+		.then(function(notes) {
+			return notes.map(function(n) { return n.data; });
+		});
+};
+
+/**
+ * makes sure user has access to attach a file, then returns a streaming
+ * function we can use to send the file data to.
+ */
+exports.attach_file = function(user_id, note_id) {
+	var space_id;
+	return db.by_id('notes', note_id)
+		.then(function(note) {
+			if(!note) throw error.not_found('that note doesn\'t exist');
+			space_id = note.space_id;
+			return space_model.permissions_check(user_id, space_id, space_model.permissions.edit_note);
+		})
+		.then(function() {
+			return file_model.attach(note_id);
+		})
+		.then(function(stream) {
+			var finishfn = function(file_size) {
+				return space_model.get_space_user_ids(space_id)
+					.then(function(user_ids) {
+						return sync_model.add_record(user_ids, user_id, 'note', note_id, 'edit');
+					})
+					.then(function(sync_ids) {
+						// DON'T return, we don't failed analytics to grind the
+						// sync to a halt
+						analytics.track(user_id, 'file.upload', {size: file_size});
+						// return the full note data object (w/ sync ids)
+						return get_by_id(note_id)
+							.tap(function(notedata) {
+								notedata.sync_ids = sync_ids;
+							});
+					});
+			};
+			return [
+				stream,
+				finishfn,
+			]
+		});
+};
+
+/**
+ * grab a note's attachment (URL)
+ */
+exports.get_file_url = function(user_id, note_id) {
+	var space_id;
+	return db.by_id('notes', note_id)
+		.then(function(note) {
+			if(!note) throw error.not_found('that note doesn\'t exist');
+			space_id = note.space_id;
+			return space_model.permissions_check(user_id, space_id, space_model.permissions.edit_note);
+		})
+		.then(function() {
+			return file_model.file_url(note_id);
+		});
+};
+
+var add = space_model.simple_add(
+	'note',
+	'notes',
+	space_model.permissions.add_note,
+	function(data) { return {id: data.id, space_id: data.space_id, data: db.json(data)}; }
+);
+
+var edit = space_model.simple_edit(
+	'note',
+	'notes',
+	space_model.permissions.edit_note,
+	get_by_id,
+	function(data) { return {id: data.id, space_id: data.space_id, data: db.json(data)}; }
+);
+
+var del = space_model.simple_delete(
+	'note',
+	'notes',
+	space_model.permissions.delete_note,
+	get_by_id
+);
+
+var link = function(ids) {
+	return db.by_ids('notes', ids, {fields: ['data']})
+		.then(function(items) {
+			return items.map(function(i) { return i.data;});
+		});
+};
+
+var delete_note_file = function(user_id, note_id) {
+	return db.by_id('notes', note_id)
+		.tap(function(note) {
+			return space_model.permissions_check(user_id, note.space_id, space_model.permissions.edit_note);
+		})
+		.tap(function(note) {
+			var data = note.data || {};
+			if(!data.has_file) throw {missing_file: true};
+			return file_model.delete_attachment(note_id);
+		})
+		.tap(function(note) {
+			// remove the attachment from data
+			var data = note.data || {};
+			data.has_file = false;
+			delete data.file;
+			return db.update('notes', note_id, {data: data});
+		})
+		.then(function(note) {
+			return space_model.get_space_user_ids(note.space_id)
+				.then(function(user_ids) {
+					return sync_model.add_record(user_ids, user_id, 'note', note.id, 'edit');
+				});
+		})
+		.catch(function(err) { return err.missing_file === true; }, function(err) {
+			return [];
+		});
+};
 
 sync_model.register('note', {
 	add: add,
@@ -14,30 +163,4 @@ sync_model.register('file', {
 	delete: delete_note_file,
 	link: link,
 });
-
-exports.get_by_space_id = function(space_id) {
-	return db.query('SELECT data FROM notes WHERE space_id = {{space_id}}', {space_id: space_id})
-		.then(function(notes) {
-			return notes.map(function(n) { return n.data; });
-		});
-};
-
-var add = function(user_id, data) {
-};
-
-var edit = function(user_id, data) {
-};
-
-var del = function(user_id, note_id) {
-};
-
-var delete_note_file = function(user_id, note_id) {
-};
-
-var link = function(ids) {
-	return db.by_ids('notes', ids, {fields: ['data']})
-		.then(function(items) {
-			return items.map(function(i) { return i.data;});
-		});
-};
 

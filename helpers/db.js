@@ -114,9 +114,9 @@ exports.first = function(qry, query_data, options) {
  */
 exports.by_id = function(table, id, options) {
 	options || (options = {});
-	var fields = options.fields || ['*'];
+	var fields = options.fields;
 
-	var qry_fields = fields.map(clean);
+	var qry_fields = fields ? fields.map(clean) : ['*'];
 	return exports.first('SELECT '+qry_fields.join(',')+' FROM '+clean(table)+' WHERE id = {{id}} LIMIT 1', {id: id});
 };
 
@@ -144,6 +144,7 @@ exports.by_ids = function(table, ids, options) {
  */
 var build_insert = function(table, data) {
 	if(!Array.isArray(data)) data = [data];
+	else if(data.length == 0) throw new Error('empty data given to db.build_insert');
 
 	var keys = Object.keys(data[0]);
 	var qry_keys = keys.map(function(k) { return '"'+clean(k)+'"'; });

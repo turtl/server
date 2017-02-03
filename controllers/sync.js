@@ -30,6 +30,7 @@ var partial_sync = function(req, res) {
 	var sync_id = req.query.sync_id;
 	return model.sync_from(user_id, sync_id)
 		.spread(function(sync_records, latest_sync_id) {
+			tres.send(res, {records: sync_records, sync_id: latest_sync_id});
 		})
 		.catch(tres.err.bind(tres, res));
 }
@@ -61,6 +62,9 @@ var full_sync = function(req, res) {
  * items.
  */
 var bulk_sync = function(req, res) {
+	var user_id = req.user.id;
+	var sync_records = req.body;
+	return tres.wrap(res, model.bulk_sync(user_id, sync_records));
 };
 
 

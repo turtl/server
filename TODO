@@ -1,3 +1,9 @@
-- note/file validation/sync
-  - s3/local file uploads
+- note: get attachment (test s3 (curl problems))
+- note: delete attachment (test local/s3)
+- user.delete
+- error log
+
+JS features:
+- Your settings -> Resend confirmation (only if unconfirmed)
+- only store space keys in keychain. everything else should be subkeys
 
