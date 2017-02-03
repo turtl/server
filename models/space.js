@@ -124,7 +124,7 @@ var populate_members = function(spaces, options) {
 		Promise.resolve([]) :
 		invite_model.get_by_spaces_ids(space_ids);
 	var promises = [
-		db.query('SELECT * FROM spaces_users WHERE space_id IN ({{space_ids}})', {space_ids: db.literal(space_ids.join(','))}),
+		db.by_ids('spaces_users', space_ids, {id_field: 'space_id'}),
 		invite_promise,
 	];
 	return Promise.all(promises)
@@ -143,7 +143,7 @@ var populate_members = function(spaces, options) {
 				var space = space_idx[invite.space_id];
 				if(!space) return;
 				if(!space.data) space.data = {};
-				if(!space.data.members) space.data.invites = [];
+				if(!space.data.invites) space.data.invites = [];
 				space.data.invites.push(invite);
 			});
 			return spaces;
@@ -178,7 +178,9 @@ exports.get_space_user_ids = function(space_id) {
 /**
  * get all spaces attached to a user
  */
-exports.get_by_user_id = function(user_id) {
+exports.get_by_user_id = function(user_id, options) {
+	options || (options = {});
+	var role = options.role;
 	var qry = [
 		'SELECT',
 		'	s.*',
@@ -188,8 +190,13 @@ exports.get_by_user_id = function(user_id) {
 		'WHERE',
 		'	s.id = su.space_id AND',
 		'	su.user_id = {{uid}}',
-	].join('\n');
-	return db.query(qry, {uid: user_id})
+	];
+	var params = {uid: user_id};
+	if(role) {
+		qry.push('	AND su.role = {{role}}');
+		params.role = role;
+	}
+	return db.query(qry.join('\n'), params)
 		.then(populate_members);
 };
 
@@ -222,34 +229,6 @@ exports.get_data_tree = function(space_id, options) {
 		board_model.get_by_space_id(space_id),
 		note_model.get_by_space_id(space_id),
 	])
-};
-
-/**
- * get the spaces a user admins, optionally spaces that the user is the only
- * admin of
- */
-exports.get_users_owned_spaces = function(user_id, options) {
-	options || (options = {});
-	var sole_owner = options.sole_owner;
-
-	return exports.get_by_user_id(user_id)
-		.then(function(spaces) {
-			return spaces
-				.filter(function(space) {
-					var i_am_admin = false;
-					var number_of_admins = 0;
-					(space.members || []).forEach(function(member) {
-						var roles = (member.data || {}).roles || [];
-						if(roles.indexOf('admin') >= 0)
-						{
-							number_of_admins++;
-							if(member.user_id == user_id) i_am_admin = true;
-						}
-					});
-					if(sole_owner) return i_am_admin && number_of_admins == 1;
-					else return i_am_admin;
-				});
-		});
 };
 
 var add = function(user_id, data) {
@@ -291,17 +270,29 @@ var edit = function(user_id, data) {
 };
 
 var del = function(user_id, space_id) {
+	var affected_users = null;
 	return exports.permissions_check(user_id, space_id, permissions.delete_space)
+		.tap(function() {
+			return exports.get_space_user_ids(space_id)
+				.then(function(user_ids) { affected_users = user_ids; });
+		})
 		.then(function(_) {
 			return db.delete('spaces', space_id);
 		})
 		.then(function(_) {
-			return exports.get_space_user_ids(space_id)
-				.then(function(user_ids) {
-					return sync_model.add_record(user_ids, user_id, 'space', space_id, 'delete')
-				});
+			var params = {space_id: space_id};
+			return Promise.all([
+				db.query('DELETE FROM spaces_users WHERE space_id = {{space_id}}', params),
+				db.query('DELETE FROM spaces_invites WHERE space_id = {{space_id}}', params),
+				db.query('DELETE FROM notes WHERE space_id = {{space_id}}', params),
+				db.query('DELETE FROM boards WHERE space_id = {{space_id}}', params),
+			]);
+		})
+		.then(function(_) {
+			return sync_model.add_record(affected_users, user_id, 'space', space_id, 'delete')
 		});
 };
+exports.delete_space = del;
 
 var link = function(ids) {
 	return db.by_ids('spaces', ids, {fields: ['data']})

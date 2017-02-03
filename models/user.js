@@ -171,12 +171,23 @@ exports.confirm_user = function(email, token) {
 exports.delete = function(cur_user_id, user_id) {
 	if(cur_user_id != user_id) return Promise.reject(error.forbidden('you cannot delete an account you don\'t own'));
 
-	return space_model.get_users_owned_spaces(user_id, {sole_owner: true})
-		.then(function(my_spaces) {
-			// TODO: remove owned spaces (and data in said spaces)
-			// TODO: force setting owner if shared spaces?
-			// TODO: analytics track user.delete
-			throw new Error('unimplemented');
+	var num_spaces = 0;
+	return space_model.get_by_user_id(user_id, {role: space_model.roles.owner})
+		.then(function(owned_spaces) {
+			num_spaces = owned_spaces.length;
+			return Promise.all(owned_spaces.map(function(space) {
+				return space_model.delete_space(user_id, space.id);
+			}));
+		})
+		.then(function() {
+			var params = {user_id: user_id};
+			return Promise.all([
+				db.query('DELETE FROM keychain WHERE user_id = {{user_id}}', params),
+				db.query('DELETE FROM users WHERE id = {{user_id}}', params),
+			]);
+		})
+		.then(function() {
+			analytics.track('user.delete', {user_id: user_id, spaces: num_spaces});
 		});
 };
 

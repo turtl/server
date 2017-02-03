@@ -20,10 +20,15 @@ exports.register = function(type, syncs) {
 };
 
 // -----------------------------------------------------------------------------
-// NOTE: i'd normally put this with the other imports at the top, but we *need*
-// to define `sync.register()` before loading the space model.
+// NOTE: i'd normally put these with the other imports at the top, but we *need*
+// to define `sync.register()` before loading the models.
 // -----------------------------------------------------------------------------
+var user_model = require('./user');
 var space_model = require('./space');
+var keychain_model = require('./keychain');
+var board_model = require('./board');
+var note_model = require('./note');
+var invite_model = require('./invite');
 
 /**
  * Make a sync record.
@@ -305,12 +310,15 @@ exports.bulk_sync = function(user_id, sync_records) {
 					data: item,
 				});
 				success_idx[sync._id] = true;
-				// DON'T return, we don't failed analytics to grind the sync to
-				// a halt
+				// DON'T return, we don't want failed analytics to grind the
+				// sync to a halt
 				analytics.track(user_id, sync.type+'.'+sync.action);
 			})
 			.catch(function(err) {
 				log.error('sync.bulk_sync() -- ', err);
+				// store the errmsg in the sync item itself, which will be
+				// returned to the client.
+				sync.error = err.message;
 				throw err;
 			});
 	}).catch(function(err) {
@@ -323,8 +331,70 @@ exports.bulk_sync = function(user_id, sync_records) {
 			failures: sync_records.filter(function(sync) {
 				return !success_idx[sync._id];
 			}),
-			error: fail_err && fail_err.message,
 		};
 	});
+};
+
+/**
+ * Grab all a user's profile data, in the form of sync records.
+ */
+exports.full_sync = function(user_id) {
+	var user;
+	var sync_records = [];
+	var space_ids = [];
+	return user_model.get_by_id(user_id)
+		.then(function(_user) {
+			user = _user;
+			user.user_id = user_id;
+			sync_records.push(convert_to_sync(user, 'user', 'add'));
+			delete user.user_id;
+			return keychain_model.get_by_user(user_id);
+		})
+		.then(function(keychain) {
+			keychain.forEach(function(entry) {
+				sync_records.push(convert_to_sync(entry.data, 'keychain', 'add'));
+			});
+			return space_model.get_by_user_id(user_id);
+		})
+		.then(function(spaces) {
+			return Promise.all(spaces.map(function(space) {
+				space_ids.push(space.id);
+				return space_model.user_has_permission(user_id, space.id, space_model.permissions.add_space_invite)
+					.then(function(has_perm) {
+						if(!has_perm) delete space.data.invites;
+						// spaces return the top-level object, not space.data, so we
+						// have to dig in to create the sync item.
+						sync_records.push(convert_to_sync(space.data, 'space', 'add'));
+					});
+			}));
+		})
+		.then(function(spaces) {
+			return board_model.get_by_spaces(space_ids);
+		})
+		.then(function(boards) {
+			boards.forEach(function(board) {
+				sync_records.push(convert_to_sync(board, 'board', 'add'));
+			});
+			return note_model.get_by_spaces(space_ids);
+		})
+		.then(function(notes) {
+			notes.forEach(function(note) {
+				sync_records.push(convert_to_sync(note, 'note', 'add'));
+			});
+			return invite_model.get_by_to_email(user.username);
+		})
+		.then(function(invites) {
+			invites.forEach(function(invite) {
+				sync_records.push(convert_to_sync(invite, 'invite', 'add'));
+			});
+			return db.first('SELECT MAX(id) AS sync_id FROM sync')
+				.then(function(rec) { return rec.sync_id; });
+		})
+		.then(function(sync_id) {
+			return {
+				sync_id: sync_id,
+				records: sync_records,
+			};
+		});
 };
 

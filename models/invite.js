@@ -166,8 +166,13 @@ exports.accept = function(user_id, space_id, invite_id) {
 		.tap(function(invite) {
 			if(!invite) throw error.not_found('that invite doesn\'t exist');
 			return user_model.get_by_id(user_id)
-				.tap(function(user) {
+				.then(function(user) {
 					if(user.username != invite.to_user) throw error.forbidden('that invite wasn\'t sent to your email ('+user.username+')');
+					return space_model.user_is_in_space(user_id, space_id);
+				})
+				.then(function(spaceuser) {
+					if(!spaceuser) return;
+					throw error.conflict('you are already a member of space '+space_id);
 				});
 		})
 		.tap(function(invite) {
@@ -233,6 +238,14 @@ exports.delete = function(user_id, space_id, invite_id) {
 		})
 		.tap(function() {
 			analytics.track('space.invite-delete', {space_id: space_id});
+		});
+};
+
+exports.get_by_to_email = function(to_email) {
+	var qry = 'SELECT data FROM spaces_invites WHERE to_user = {{email}}';
+	return db.query(qry, {email: to_email})
+		.then(function(invites) {
+			return (invites || []).map(function(inv) { return inv.data; });
 		});
 };
 

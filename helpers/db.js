@@ -125,7 +125,7 @@ exports.by_id = function(table, id, options) {
  */
 exports.by_ids = function(table, ids, options) {
 	options || (options = {});
-	var fields = options.fields || ['*'];
+	var fields = options.fields;
 	var id_field = options.id_field || 'id';
 
 	var id_data = {};
@@ -134,7 +134,7 @@ exports.by_ids = function(table, ids, options) {
 		id_data['--id-'+i] = id;
 		qry_ids.push('{{--id-'+i+'}}')
 	});
-	var qry_fields = fields.map(clean);
+	var qry_fields = fields ? fields.map(clean) : ['*'];
 	return exports.query('SELECT '+qry_fields.join(',')+' FROM '+clean(table)+' WHERE '+clean(id_field)+' IN ( '+qry_ids.join(',')+' )', id_data);
 };
 
@@ -206,15 +206,14 @@ exports.update = function(table, id, data) {
  *
  * does not support bulk upserts SO EVERYONE STOP FUCKING ASKING ABOUT IT
  */
-exports.upsert = function(table, data, key, options) {
-	options || (options = {});
+exports.upsert = function(table, data, key) {
 	if(!data[key]) return Promise.reject(new Error('db: upsert: `key` field not present in `data`'));
 	if(Array.isArray(data)) return Promise.reject(new Error('db: upsert: `data` cannot be an array.'));
 
 	var keys = Object.keys(data);
 	try
 	{
-		var built = build_insert(table, data, options);
+		var built = build_insert(table, data);
 	}
 	catch(err)
 	{

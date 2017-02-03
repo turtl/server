@@ -10,13 +10,7 @@ vlad.define('keychain', {
 	type: {type: vlad.type.string, required: true},
 	item_id: {type: vlad.type.client_id, required: true},
 	user_id: {type: vlad.type.int, required: true},
-});
-
-sync_model.register('keychain', {
-	add: add,
-	edit: edit,
-	delete: del,
-	link: link,
+	body: {type: vlad.type.string, required: true},
 });
 
 /**
@@ -25,6 +19,16 @@ sync_model.register('keychain', {
 var get_by_id = function(keychain_id) {
 	return db.by_id('keychain', keychain_id)
 		.then(function(entry) { return entry.data; });
+};
+
+exports.get_by_user = function(user_id) {
+	var qry = 'SELECT * FROM keychain WHERE user_id = {{user_id}}';
+	return db.query(qry, {user_id: user_id})
+		.then(function(keychain) {
+			return (keychain || []).map(function(entry) {
+				return entry.data;
+			});
+		});
 };
 
 var add = function(user_id, data) {
@@ -65,7 +69,7 @@ var del = function(user_id, keychain_id) {
 				throw error.forbidden('you can\'t delete a keychain entry you don\'t own');
 			}
 		});
-	return db.delete('keychain', keychain_id);
+	return db.delete('keychain', keychain_id)
 		.then(function(_) {
 			return sync_model.add_record([user_id], user_id, 'keychain', keychain_id, 'delete')
 		});
@@ -78,4 +82,11 @@ var link = function(ids) {
 			return items.map(function(i) { return i.data;});
 		});
 };
+
+sync_model.register('keychain', {
+	add: add,
+	edit: edit,
+	delete: del,
+	link: link,
+});
 

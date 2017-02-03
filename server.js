@@ -15,7 +15,7 @@ app.disable('etag');
 app.use(method_override('_method'));
 app.use(turtl_auth);
 app.use(body_parser.json({strict: false, limit: '24mb'}));
-app.use(body_parser.urlencoded({extended: false, limit: '24mb'}));
+app.use(body_parser.urlencoded({extended: true, limit: '4mb'}));
 app.use(morgan(':remote-addr ":method :url" :status :res[content-length]', {
 	stream: { write: function(message, _enc) { log.info(message.slice(0, -1)); } }
 }));

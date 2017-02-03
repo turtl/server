@@ -47,6 +47,8 @@ var partial_sync = function(req, res) {
  * and grab this.
  */
 var full_sync = function(req, res) {
+	var user_id = req.user.id;
+	return tres.wrap(res, model.full_sync(user_id));
 };
 
 /**

@@ -77,18 +77,11 @@ builder.table('boards', {
 	],
 });
 
-builder.table('spaces_invites', {
+builder.table('errorlog', {
 	fields: {
 		id: ty.pk,
-		space_id: ty.id,
-		from_user_id: ty.id_int,
-		to_user: ty.text,
 		data: ty.json,
 	},
-	indexes: [
-		{name: 'from_user_id', fields: ['from_user_id']},
-		{name: 'to_user', fields: ['to_user']},
-	],
 });
 
 builder.table('keychain', {
@@ -118,6 +111,21 @@ builder.table('spaces', {
 		id: ty.pk,
 		data: ty.json,
 	},
+});
+
+builder.table('spaces_invites', {
+	fields: {
+		id: ty.pk,
+		space_id: ty.id,
+		from_user_id: ty.id_int,
+		to_user: ty.text,
+		data: ty.json,
+	},
+	indexes: [
+		{name: 'space_id', fields: ['space_id']},
+		{name: 'from_user_id', fields: ['from_user_id']},
+		{name: 'to_user', fields: ['to_user']},
+	],
 });
 
 builder.table('spaces_users', {

@@ -25,19 +25,20 @@ vlad.define('note-file', {
 	body: {type: vlad.type.string},
 });
 
-/**
- * get a note's data by id
- */
 var get_by_id = function(note_id) {
 	return db.by_id('notes', note_id)
 		.then(function(note) { return note.data; });
 };
 
-exports.get_by_space_id = function(space_id) {
-	return db.query('SELECT data FROM notes WHERE space_id = {{space_id}}', {space_id: space_id})
+exports.get_by_spaces = function(space_ids) {
+	return db.by_ids('notes', space_ids, {id_field: 'space_id'})
 		.then(function(notes) {
-			return notes.map(function(n) { return n.data; });
+			return notes.map(function(b) { return b.data; });
 		});
+};
+
+exports.get_by_space_id = function(space_id) {
+	return exports.get_by_spaces([space_id]);
 };
 
 /**

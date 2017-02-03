@@ -21,11 +21,15 @@ var get_by_id = function(board_id) {
 		.then(function(board) { return board.data; });
 };
 
-exports.get_by_space_id = function(space_id) {
-	return db.query('SELECT data FROM boards WHERE space_id = {{space_id}}', {space_id: space_id})
+exports.get_by_spaces = function(space_ids) {
+	return db.by_ids('boards', space_ids, {id_field: 'space_id'})
 		.then(function(boards) {
 			return boards.map(function(b) { return b.data; });
 		});
+};
+
+exports.get_by_space_id = function(space_id) {
+	return exports.get_by_spaces([space_id]);
 };
 
 var add = space_model.simple_add(
