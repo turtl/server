@@ -10,6 +10,7 @@ var public_routes = [
 ].map(function(pair) { return new RegExp('^'+pair+'$'); });
 
 module.exports = function(req, res, next) {
+	if(req.method == 'OPTIONS') return next();
 	var auth = req.headers.authorization;
 	// see if we have a public route
 	var method_url = req.method.toLowerCase()+' '+req.url;

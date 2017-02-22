@@ -32,6 +32,7 @@ var get_by_id = function(note_id) {
 };
 
 exports.get_by_spaces = function(space_ids) {
+	if(space_ids.length == 0) return Promise.resolve([]);
 	return db.by_ids('notes', space_ids, {id_field: 'space_id'})
 		.then(function(notes) {
 			return notes.map(function(b) { return b.data; });

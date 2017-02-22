@@ -15,7 +15,7 @@ var analytics = require('./analytics');
 var email_model = require('./email');
 
 vlad.define('user', {
-	public_key: {type: vlad.type.string},
+	pubkey: {type: vlad.type.string},
 	name: {type: vlad.type.string},
 	body: {type: vlad.type.string},
 });
@@ -67,6 +67,7 @@ exports.random_token = random_token;
  */
 var clean_user = function(user) {
 	delete user.auth;
+	if(user.data) delete user.data.confirmation_token;
 	return user;
 };
 
@@ -89,7 +90,7 @@ exports.check_auth = function(authinfo) {
 exports.join = function(userdata) {
 	if(!userdata.auth) return Promise.reject(error.bad_request('missing `auth` key'));
 	if(!userdata.username) return Promise.reject(error.bad_request('missing `username` key (must be a valid email)'));
-	if(!userdata.salt) return Promise.reject(error.bad_request('missing `salt` key (must be a hex-encoded 128-bit value)'));
+	if(!userdata.username.match(/@/)) return Promise.reject(error.bad_request('please enter a valid email'));
 	var data = vlad.validate('user', userdata.data || {});
 
 	// create a confirmation token
@@ -99,7 +100,7 @@ exports.join = function(userdata) {
 	// check existing username
 	return db.first('SELECT id FROM users WHERE username = {{username}} LIMIT 1', {username: userdata.username})
 		.then(function(existing) {
-			if(existing) throw error.forbidden('the username "'+userdata.username+'" already exists');
+			if(existing) throw error.forbidden('the account "'+userdata.username+'" already exists');
 			// two iterations. yes, two. if someone gets the database, they
 			// won't be able to crack the real auth key out of it since it's
 			// just a binary blob anyway, meaning this step only exists to keep
@@ -110,7 +111,6 @@ exports.join = function(userdata) {
 			return db.insert('users', {
 				username: userdata.username,
 				auth: auth,
-				salt: userdata.salt,
 				confirmed: false,
 				data: db.json(userdata.data),
 				storage_mb: 100
@@ -124,14 +124,17 @@ exports.join = function(userdata) {
 				'',
 				'However, sharing is disabled on your account until you confirm your email by going here:',
 				'',
-				'  '+confirmation_url,
+				confirmation_url,
 				'',
 				'You can resend this confirmation email at any time through the app by opening the Turtl menu and going to Your settings -> Resend confirmation',
 				'',
 				'Thanks!',
 				'- Turtl team',
 			].join('\n');
-			return email_model.send(config.app.emails.info, user.username, subject, body);
+			return email_model.send(config.app.emails.info, user.username, subject, body)
+				.catch(function(err) {
+					throw error.internal('problem sending confirmation email: '+err.message);
+				});
 		})
 		.tap(function(user) {
 			return analytics.join(user.id, {
@@ -201,6 +204,9 @@ exports.get_by_id = function(user_id) {
 exports.get_by_email = function(email) {
 	return db.first('SELECT * FROM users WHERE username = {{email}} LIMIT 1', {email: email})
 		.then(clean_user);
+};
+
+exports.calculate_storage = function(user_id) {
 };
 
 var edit = function(user_id, data) {

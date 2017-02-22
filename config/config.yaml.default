@@ -17,17 +17,22 @@ app:
   api_url: 'http://api.yourdomain.com:8181'
   www_url: 'https://yourdomain.com'
   emails:
-    noreply: 'Turtl <noreply@yourdomain.com>'
-    invites: 'invites@yourdomain.com'
+    info: 'Turtl <info@turtlapp.com>'
+    invites: 'invites@turtlapp.com'
   # TODO: replace this with a long, unique value. seriously. write down a dream
   # you had, or the short story you came up with during your creative writing
   # class in your freshmen year of college. have fun with it.
   secure_hash_salt: "Plaque is a figment of the liberal media and the dental industry to scare you into buying useless appliances and pastes. Now, I've read the arguments on both sides and I haven't found any evidence yet to support the need to brush your teeth. Ever."
 
-mailgun:
-  enabled: false
-  key: ''
-  domain: 'mail.yourdomain.com'
+s3:
+  token: 'IHADAPETSNAKEBUTHEDIEDNOOOOO'
+  secret: ''
+  bucket: ''
+  endpoint: 'https://s3.amazonaws.com'
+
+sendgrid:
+  enabled: true
+  apikey: ''
 
 analytics:
   enabled: false

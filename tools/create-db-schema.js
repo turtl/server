@@ -166,7 +166,6 @@ builder.table('users', {
 		id: ty.pk_int,
 		username: builder.not_null(ty.text),
 		auth: ty.text,
-		salt: ty.text,
 		confirmed: ty.bool,
 		data: ty.json,
 		storage_mb: ty.int,

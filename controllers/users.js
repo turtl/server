@@ -5,6 +5,7 @@ var log = require('../helpers/log');
 
 exports.route = function(app) {
 	app.post('/users', join);
+	app.get('/users/:user_id', get_by_id);
 	app.post('/auth', authenticate);
 	app.get('/users/confirm/:email/:token', confirm_user);
 	app.delete('/users/:user_id', delete_account);
@@ -18,11 +19,20 @@ var join = function(req, res) {
 	tres.wrap(res, model.join(data));
 };
 
+var get_by_id = function(req, res) {
+	var user_id = req.params.user_id;
+	var cur_user_id = req.user.id;
+	if(user_id != cur_user_id) {
+		return tres.err(res, new Error('you can\'t grab another user\'s info'));
+	}
+	tres.wrap(res, model.get_by_id(user_id));
+};
+
 /**
  * a basic endpoint specifically for authentication
  */
 var authenticate = function(req, res) {
-	return tres.send(res, {ok: true});
+	return tres.send(res, req.user.id);
 };
 
 var confirm_user = function(req, res) {

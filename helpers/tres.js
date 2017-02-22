@@ -28,7 +28,7 @@ exports.err = function(res, err, options) {
 	var errobj = {
 		error: {message: err.message}
 	};
-	log.error('tres.err -- ', err);
+	log.error('tres.err -- ', status == 500 ? err : err.message);
 	return res.status(status).send(JSON.stringify(errobj));
 };
 
