@@ -16,6 +16,7 @@ var process_sync_map = {};
  * process_incoming_sync())
  */
 exports.register = function(type, syncs) {
+	log.debug('register sync: '+type+': ['+Object.keys(syncs).join(', ')+']');
 	process_sync_map[type] = syncs;
 };
 
@@ -24,8 +25,8 @@ exports.register = function(type, syncs) {
 // to define `sync.register()` before loading the models.
 // -----------------------------------------------------------------------------
 var user_model = require('./user');
-var space_model = require('./space');
 var keychain_model = require('./keychain');
+var space_model = require('./space');
 var board_model = require('./board');
 var note_model = require('./note');
 var invite_model = require('./invite');
@@ -60,7 +61,10 @@ var convert_to_sync = function(item, type, action) {
  * various clients share data with each other.
  */
 exports.add_record = function(affected_user_ids, creator_user_id, type, object_id, action) {
-	if(affected_user_ids.length == 0) return Promise.reject(error.internal('empty user array passed to sync.add_record (shame, shame)'));
+	// if this affects no users, then it's useless, but not worth derailing the
+	// sync process. return a blank array.
+	if(affected_user_ids.length == 0) return Promise.resolve([]);
+
 	affected_user_ids = util.dedupe(affected_user_ids);
 	var sync_rec = make_sync_record(creator_user_id, type, object_id, action);
 	return db.insert('sync', sync_rec)
@@ -75,6 +79,44 @@ exports.add_record = function(affected_user_ids, creator_user_id, type, object_i
 };
 
 /**
+ * Given a set of old and new user ids, find all users that are the same and
+ * return same, old, new (all unique from each other).
+ *
+ * This is useful when you WOULD be tempted to do a delete-on-old/add-on-new
+ * double-sync, but some of your users would want a edit-on-same for a less
+ * jarring experience in the client.
+ */
+exports.split_same_users = function(old_user_ids, new_user_ids) {
+	var in_both = [];
+	old_user_ids.forEach(function(old_user_id) {
+		if(new_user_ids.indexOf(old_user_id) >= 0) {
+			in_both.push(old_user_id);
+		}
+	});
+	old_user_ids = old_user_ids.filter(function(id) { return in_both.indexOf(id) < 0; });
+	new_user_ids = new_user_ids.filter(function(id) { return in_both.indexOf(id) < 0; });
+	return {
+		old: old_user_ids,
+		new: new_user_ids,
+		same: in_both,
+	};
+};
+
+/**
+ * Add sync records from a split returned from split_same_users
+ */
+exports.add_records_from_split = function(user_id, split_obj, action_map, sync_type, item_id) {
+	var promises = [];
+	var push_sync = function(user_ids, action) {
+		promises.push(exports.add_record(user_ids, user_id, sync_type, item_id, action));
+	};
+	['same', 'old', 'new'].forEach(function(split_type) {
+		push_sync(split_obj[split_type], action_map[split_type]);
+	});
+	return Promise.all(promises);
+};
+
+/**
  * takes a set of sync records and a set of items (presumably pulled out from
  * said sync records) and matches them together. destructive on sync_records.
  */
@@ -84,7 +126,7 @@ var populate_sync_records_with_items = function(sync_records, items) {
 	sync_records.forEach(function(sync) {
 		var item = item_index[sync.item_id];
 		if(item) {
-			sync.data = item.data;
+			sync.data = item;
 		} else {
 			sync.data = {missing: true};
 		}
@@ -138,7 +180,7 @@ var link_sync_records = function(sync_records) {
 			throw error.bad_request('Missing sync handler for type `'+type+'`');
 		}
 		var sync_type_handler = process_sync_map[type];
-		var link = sync_type_handler[type].link;
+		var link = sync_type_handler.link;
 		if(!link) {
 			throw error.bad_request('Missing sync handler for type `'+type+'.link`');
 		}
@@ -176,7 +218,7 @@ var link_sync_records = function(sync_records) {
  */
 var clean_sync_records = function(sync_records) {
 	return sync_records.map(function(sync) {
-		if(!process_sync_map[sync.type] || !process_sync_map[sync.type].clean) return;
+		if(!process_sync_map[sync.type] || !process_sync_map[sync.type].clean) return sync;
 		sync.data = process_sync_map[sync.type].clean(sync.data);
 		return sync;
 	});
@@ -256,12 +298,7 @@ exports.sync_from = function(user_id, from_sync_id) {
  * with the sync system. Returns the final item added/edited/deleted/etced.
  */
 var process_incoming_sync = function(user_id, sync) {
-	var allowed_actions = ['add', 'edit', 'delete'];
 	var item = sync.data;
-	if(allowed_actions.indexOf(sync.action) < 0) {
-		return Promise.reject(error.bad_request('bad sync action (`'+sync.action+'`), must be one of '+allowed_actions.join(', ')));
-	}
-
 	if(!process_sync_map[sync.type]) {
 		return Promise.reject(error.bad_request('Missing sync handler for type `'+sync.type+'`'));
 	}
@@ -283,7 +320,12 @@ var process_incoming_sync = function(user_id, sync) {
 				// otherwise)
 				return {id: sync.data.id, sync_ids: item_data};
 			}
-			return item_data;
+			// NOTE: since our sync handlers are expected to return the full
+			// db record, and we really only want to return the object's `data`,
+			// here we grab the data and set in our sync_ids
+			var data = item_data.data;
+			data.sync_ids = item_data.sync_ids;
+			return item_data.data;
 		});
 };
 
@@ -299,11 +341,13 @@ exports.bulk_sync = function(user_id, sync_records) {
 	var successes = [];
 	var fail_err = null;
 	return Promise.each(sync_records, function(sync) {
+		var sync_client_id = sync.id;
 		return process_incoming_sync(user_id, sync)
 			.tap(function(item) {
 				var sync_ids = item.sync_ids;
 				delete item.sync_ids;
 				successes.push({
+					id: sync_client_id,
 					type: sync.type,
 					action: sync.action,
 					sync_ids: sync_ids,

@@ -98,11 +98,36 @@ exports.get_file_url = function(user_id, note_id) {
 		});
 };
 
+exports.get_by_space_id_board_id = function(space_id, board_id) {
+	var qry = [
+		'SELECT *',
+		'FROM notes',
+		'WHERE space_id = {{space_id}} AND board_id = {{board_id}}'
+	].join('\n');
+	return db.query(qry, {space_id: space_id, board_id: board_id})
+};
+
+/**
+ * Move a note between spaces. No permissions checks. No syncing.
+ */
+exports.move_note_space = function(note_id, new_space_id) {
+	return db.by_id('notes', note_id)
+		.then(function(note_rec) {
+			var data = note_rec.data;
+			data.space_id = new_space_id;
+			var update = {
+				space_id: new_space_id,
+				data: data,
+			};
+			return db.update('notes', note_id, update);
+		});
+};
+
 var add = space_model.simple_add(
 	'note',
 	'notes',
 	space_model.permissions.add_note,
-	function(data) { return {id: data.id, space_id: data.space_id, data: db.json(data)}; }
+	function(data) { return {id: data.id, space_id: data.space_id, board_id: data.board_id, data: db.json(data)}; }
 );
 
 var edit = space_model.simple_edit(
@@ -110,13 +135,21 @@ var edit = space_model.simple_edit(
 	'notes',
 	space_model.permissions.edit_note,
 	get_by_id,
-	function(data) { return {id: data.id, space_id: data.space_id, data: db.json(data)}; }
+	function(data) { return {id: data.id, space_id: data.space_id, board_id: data.board_id, data: db.json(data)}; }
 );
 
 var del = space_model.simple_delete(
 	'note',
 	'notes',
 	space_model.permissions.delete_note,
+	get_by_id
+);
+
+var move_space = space_model.simple_move_space(
+	'note',
+	'notes',
+	space_model.permissions.delete_note,
+	space_model.permissions.add_note,
 	get_by_id
 );
 
@@ -156,10 +189,11 @@ var delete_note_file = function(user_id, note_id) {
 };
 
 sync_model.register('note', {
-	add: add,
-	edit: edit,
-	delete: del,
-	link: link,
+	'add': add,
+	'edit': edit,
+	'delete': del,
+	'move-space': move_space,
+	'link': link,
 });
 
 sync_model.register('file', {

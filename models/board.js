@@ -3,7 +3,9 @@
 var db = require('../helpers/db');
 var sync_model = require('./sync');
 var space_model = require('./space');
+var note_model = require('./note');
 var vlad = require('../helpers/validator');
+var util = require('../helpers/util');
 
 vlad.define('board', {
 	id: {type: vlad.type.client_id, required: true},
@@ -33,6 +35,36 @@ exports.get_by_space_id = function(space_id) {
 	return exports.get_by_spaces([space_id]);
 };
 
+var move_notes_to_new_space = function(user_id, board_id, old_space_id, new_space_id) {
+	return note_model.get_by_space_id_board_id(old_space_id, board_id)
+		.tap(function(notes) {
+			return Promise.map(notes, function(note) {
+				return note_model.move_note_space(note.id, new_space_id);
+			}, {concurrency: 8});
+		})
+		.then(function(notes) {
+			var get_user_promises = [
+				space_model.get_space_user_ids(old_space_id),
+				space_model.get_space_user_ids(new_space_id),
+			];
+			return Promise.all(get_user_promises)
+				.spread(function(old_user_ids, new_user_ids) {
+					var split_users = sync_model.split_same_users(old_user_ids, new_user_ids);
+					var action_map = {
+						same: 'edit',
+						old: 'delete',
+						new: 'add',
+					};
+					return Promise.map(notes, function(note) {
+						return sync_model.add_records_from_split(user_id, split_users, action_map, 'note', note.id);
+					}, {concurrency: 3});
+				})
+				.then(function(syncs) {
+					return util.flatten(syncs);
+				});
+		});
+};
+
 var add = space_model.simple_add(
 	'board',
 	'boards',
@@ -55,54 +87,16 @@ var del = space_model.simple_delete(
 	get_by_id
 );
 
-var move_space = function(user_id, data) {
-	var data = vlad.validate('board', data);
-	var board_id = data.id;
-	return get_by_id(board_id)
-		.then(function(board_data) {
-			var old_space_id = board_data.space_id;
-			var new_space_id = data.space_id;
-			// the jackass catcher
-			if(old_space_id == new_space_id) {
-				throw {skip: true, board: board_data};
-			}
-			return Promise.all([
-				board_data,
-				new_space_id,
-				space_model.permissions_check(user_id, old_space_id, permissions.delete_board),
-				space_model.permissions_check(user_id, new_space_id, permissions.add_board),
-			]);
-		})
-		.spread(function(board_data, new_space_id) {
-			board_data.space_id = new_space_id;
-			var update = {
-				space_id: new_space_id,
-				data: board_data,
-			};
-			return Promise.all([
-				db.update('boards', board_id, update),
-				space_model.get_space_user_ids(old_space_id)
-					.then(function(user_ids) {
-						return sync_model.add_record(user_ids, user_id, 'board', board_id, 'delete');
-					}),
-				space_model.get_space_user_ids(new_space_id)
-					.then(function(user_ids) {
-						return sync_model.add_record(user_ids, user_id, 'board', board_id, 'add');
-					}),
-			]);
-		})
-		.spread(function(board, old_sync_ids, new_sync_ids) {
-			var board_data = board.data;
-			var sync_ids = old_sync_ids.concat(new_sync_ids);
-			board_data.sync_ids = sync_ids;
-			return board_data;
-		})
-		.catch(function(err) { return err.skip === true; }, function(err) {
-			var board = err.board;
-			board.sync_ids = [];
-			return board;
-		});
-};
+var move_space = space_model.simple_move_space(
+	'board',
+	'boards',
+	space_model.permissions.delete_board,
+	space_model.permissions.add_board,
+	get_by_id,
+	function(user_id, board, old_space_id, new_space_id) {
+		return move_notes_to_new_space(user_id, board.id, old_space_id, new_space_id);
+	}
+);
 
 var link = function(ids) {
 	return db.by_ids('boards', ids, {fields: ['data']})

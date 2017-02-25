@@ -6,6 +6,7 @@ var sync_model = require('./sync');
 var vlad = require('../helpers/validator');
 var error = require('../helpers/error');
 var invite_model = require('./invite');
+var util = require('../helpers/util');
 
 vlad.define('space', {
 	id: {type: vlad.type.client_id, required: true},
@@ -336,7 +337,7 @@ exports.simple_add = function(sync_type, sync_table, sync_permission, make_item_
 					.then(function(user_ids) {
 						return sync_model.add_record(user_ids, user_id, sync_type, item.id, 'add');
 					})
-					.then(function(space_ids) {
+					.then(function(sync_ids) {
 						item.sync_ids = sync_ids;
 					});
 			});
@@ -399,6 +400,78 @@ exports.simple_delete = function(sync_type, sync_table, sync_permissions, get_by
 			});
 	};
 };
+
+/**
+ * Abstracts moving an item from one space to another space (ex, a board or a
+ * note).
+ */
+exports.simple_move_space = function(sync_type, sync_table, perms_delete, perms_add, get_by_id, post_move_fn) {
+	return function(user_id, data) {
+		var data = vlad.validate(sync_type, data);
+		var item_id = data.id;
+		return get_by_id(item_id)
+			.then(function(cur_item_data) {
+				var old_space_id = cur_item_data.space_id;
+				var new_space_id = data.space_id;
+				// the jackass catcher
+				if(old_space_id == new_space_id) {
+					throw {skip: true, item: cur_item_data};
+				}
+				return Promise.all([
+					cur_item_data,
+					old_space_id,
+					new_space_id,
+					// if either permission check fails, we get booted
+					space_model.permissions_check(user_id, old_space_id, perms_delete),
+					space_model.permissions_check(user_id, new_space_id, perms_add),
+				]);
+			})
+			.spread(function(cur_item_data, old_space_id, new_space_id, _can_delete, _can_add) {
+				cur_item_data.space_id = new_space_id;
+				var update = {
+					space_id: new_space_id,
+					data: cur_item_data,
+				};
+				return db.update(sync_table, item_id, update)
+					.tap(function(item) {
+						var user_promises = [
+							space_model.get_space_user_ids(old_space_id),
+							space_model.get_space_user_ids(new_space_id),
+						];
+						return Promise.all(user_promises)
+							.spread(function(old_user_ids, new_user_ids) {
+								var split_users = sync_model.split_same_users(old_user_ids, new_user_ids);
+								var action_map = {
+									same: 'edit',
+									old: 'delete',
+									new: 'add',
+								};
+								return sync_model.add_records_from_split(user_id, split_users, action_map, sync_type, item_id);
+							})
+							.then(function(syncs) {
+								return util.flatten(syncs);
+							});
+					});
+			})
+			.tap(function(item) {
+				// if we have a post-move function, run it with some useful
+				// info. for instance, a board may want to update and create
+				// sync records for all of its notes to point to the new
+				// space when it moves
+				if(!post_move_fn) return;
+				return post_move_fn(user_id, item, old_space_id, new_space_id)
+					.then(function(sync_ids) {
+						if(!item.sync_ids) item.sync_ids = [];
+						item.sync_ids = item.sync_ids.concat(sync_ids);
+					});
+			})
+			.catch(function(err) { return err.skip === true; }, function(err) {
+				var item = err.item;
+				item.sync_ids = [];
+				return item;
+			});
+	};
+}
 
 sync_model.register('space', {
 	'add': add,

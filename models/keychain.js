@@ -75,7 +75,6 @@ var del = function(user_id, keychain_id) {
 		});
 };
 
-
 var link = function(ids) {
 	return db.by_ids('keychain', ids, {fields: ['data']})
 		.then(function(items) {

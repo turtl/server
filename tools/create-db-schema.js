@@ -99,10 +99,11 @@ builder.table('notes', {
 	fields: {
 		id: ty.pk,
 		space_id: ty.id,
+		board_id: ty.id,
 		data: ty.json
 	},
 	indexes: [
-		{name: 'space_id', fields: ['space_id']}
+		{name: 'space_id', fields: ['space_id', 'board_id']}
 	],
 });
 
