@@ -207,7 +207,7 @@ var link_sync_records = function(sync_records) {
 			});
 			return [
 				ungrouped.sort(function(a, b) { return a.id - b.id; }),
-				latest_sync_id,
+				latest_sync_id > 0 ? latest_sync_id : null,
 			];
 		});
 };
