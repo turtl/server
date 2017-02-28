@@ -68,8 +68,8 @@ var del = function(user_id, keychain_id) {
 			if(user_id != item_data.user_id) {
 				throw error.forbidden('you can\'t delete a keychain entry you don\'t own');
 			}
-		});
-	return db.delete('keychain', keychain_id)
+			return db.delete('keychain', keychain_id)
+		})
 		.then(function(_) {
 			return sync_model.add_record([user_id], user_id, 'keychain', keychain_id, 'delete')
 		});
