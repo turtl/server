@@ -396,7 +396,7 @@ exports.full_sync = function(user_id) {
 		})
 		.then(function(keychain) {
 			keychain.forEach(function(entry) {
-				sync_records.push(convert_to_sync(entry.data, 'keychain', 'add'));
+				sync_records.push(convert_to_sync(entry, 'keychain', 'add'));
 			});
 			return space_model.get_by_user_id(user_id);
 		})
