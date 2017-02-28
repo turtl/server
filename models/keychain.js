@@ -34,7 +34,7 @@ exports.get_by_user = function(user_id) {
 var add = function(user_id, data) {
 	data.user_id = user_id;
 	var data = vlad.validate('keychain', data);
-	return db.insert('keychain', {id: data.id, data: data})
+	return db.insert('keychain', {id: data.id, user_id: user_id, data: data})
 		.tap(function(item) {
 			return sync_model.add_record([user_id], user_id, 'keychain', item.id, 'add')
 				.then(function(sync_ids) {
