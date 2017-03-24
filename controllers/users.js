@@ -25,7 +25,7 @@ var get_by_id = function(req, res) {
 	if(user_id != cur_user_id) {
 		return tres.err(res, new Error('you can\'t grab another user\'s info'));
 	}
-	tres.wrap(res, model.get_by_id(user_id));
+	tres.wrap(res, model.get_by_id(user_id, {data: true}));
 };
 
 /**

@@ -24,6 +24,15 @@ app:
   # class in your freshmen year of college. have fun with it.
   secure_hash_salt: "Plaque is a figment of the liberal media and the dental industry to scare you into buying useless appliances and pastes. Now, I've read the arguments on both sides and I haven't found any evidence yet to support the need to brush your teeth. Ever."
 
+sync:
+  # how many sync records can a client send at a time? it's a good idea to have
+  # a limit here, lest a rogue client flood the server with sync items
+  max_bulk_sync_records: 32
+
+uploads:
+  local: 'd:/htdocs/turtl/server/public/uploads'
+  url: 'http://api.turtl.dev/uploads'
+
 s3:
   token: 'IHADAPETSNAKEBUTHEDIEDNOOOOO'
   secret: ''

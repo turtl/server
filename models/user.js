@@ -196,9 +196,25 @@ exports.delete = function(cur_user_id, user_id) {
 		});
 };
 
-exports.get_by_id = function(user_id) {
-	return db.by_id('users', user_id)
-		.then(clean_user);
+exports.get_by_ids = function(user_ids, options) {
+	options || (options = {});
+	return db.by_ids('users', user_ids)
+		.each(clean_user)
+		.map(function(user) {
+			if(!options.data) return user;
+			var data = user.data;
+			['id', 'username', 'storage_mb', 'confirmed'].forEach(function(field) {
+				data[field] = user[field];
+			});
+			return data;
+		});
+};
+
+exports.get_by_id = function(user_id, options) {
+	return exports.get_by_ids([user_id], options)
+		.then(function(users) {
+			return (users || [])[0];
+		});
 };
 
 exports.get_by_email = function(email) {
@@ -222,14 +238,7 @@ var edit = function(user_id, data) {
 };
 
 var link = function(ids) {
-	return db.by_ids('users', ids, {fields: ['data']})
-		.then(function(items) {
-			return items.map(function(i) {
-				var data = i.data || {};
-				data.confirmed = !!i.confirmed;
-				return data;
-			});
-		});
+	return exports.get_by_ids(ids, {data: true});
 };
 
 sync_model.register('user', {

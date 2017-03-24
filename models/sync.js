@@ -6,6 +6,7 @@ var error = require('../helpers/error');
 var analytics = require('./analytics');
 var util = require('../helpers/util');
 var log = require('../helpers/log');
+var config = require('../helpers/config');
 
 // holds our sync mappings. models will register themselves to the sync system
 // via the `register()` call
@@ -334,6 +335,12 @@ var process_incoming_sync = function(user_id, sync) {
  * user's profile.
  */
 exports.bulk_sync = function(user_id, sync_records) {
+	// enforce our sync.max_bulk_sync_records config
+	var max_sync_records = (config.sync || {}).max_bulk_sync_records;
+	if(max_sync_records) {
+		sync_records = sync_records.slice(0, max_sync_records);
+	}
+
 	// assign each sync item a unique id so we can track successes vs failures
 	sync_records.forEach(function(sync, i) { sync._id = i + 1; });
 	var success_idx = {};
@@ -386,7 +393,7 @@ exports.full_sync = function(user_id) {
 	var user;
 	var sync_records = [];
 	var space_ids = [];
-	return user_model.get_by_id(user_id)
+	return user_model.get_by_id(user_id, {data: true})
 		.then(function(_user) {
 			user = _user;
 			user.user_id = user_id;
