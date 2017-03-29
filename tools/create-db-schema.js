@@ -168,6 +168,7 @@ builder.table('users', {
 		username: builder.not_null(ty.text),
 		auth: ty.text,
 		confirmed: ty.bool,
+		confirmation_token: ty.text,
 		data: ty.json,
 		storage_mb: ty.int,
 	},

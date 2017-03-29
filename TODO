@@ -1,4 +1,3 @@
-- can notes have a null board_id??
 - user edit (confirm email change)
 - CLA signature (table/POST api/redirect)
 - disable sharing unless confirmed

@@ -67,7 +67,6 @@ exports.random_token = random_token;
  */
 var clean_user = function(user) {
 	delete user.auth;
-	if(user.data) delete user.data.confirmation_token;
 	return user;
 };
 
@@ -95,7 +94,6 @@ exports.join = function(userdata) {
 
 	// create a confirmation token
 	var token = random_token({hash: 'sha512'});
-	data.confirmation_token = token;
 
 	// check existing username
 	return db.first('SELECT id FROM users WHERE username = {{username}} LIMIT 1', {username: userdata.username})
@@ -112,29 +110,13 @@ exports.join = function(userdata) {
 				username: userdata.username,
 				auth: auth,
 				confirmed: false,
+				confirmation_token: token,
 				data: db.json(userdata.data),
 				storage_mb: 100
 			});
 		})
 		.tap(function(user) {
-			var subject = 'Welcome to Turtl! Please confirm your email';
-			var confirmation_url = config.app.api_url+'/users/confirm/'+encodeURIComponent(user.username)+'/'+encodeURIComponent(token);
-			var body = [
-				'Welcome to Turtl! Your account is active and you\'re ready to start using the app.',
-				'',
-				'However, sharing is disabled on your account until you confirm your email by going here:',
-				'',
-				confirmation_url,
-				'',
-				'You can resend this confirmation email at any time through the app by opening the Turtl menu and going to Your settings -> Resend confirmation',
-				'',
-				'Thanks!',
-				'- Turtl team',
-			].join('\n');
-			return email_model.send(config.app.emails.info, user.username, subject, body)
-				.catch(function(err) {
-					throw error.internal('problem sending confirmation email: '+err.message);
-				});
+			return send_confirmation_email(user);
 		})
 		.tap(function(user) {
 			return analytics.join(user.id, {
@@ -149,17 +131,36 @@ exports.join = function(userdata) {
 		.then(clean_user);
 };
 
+var send_confirmation_email = function(user) {
+	var subject = 'Welcome to Turtl! Please confirm your email';
+	var confirmation_url = config.app.api_url+'/users/confirm/'+encodeURIComponent(user.username)+'/'+encodeURIComponent(user.confirmation_token);
+	var body = [
+		'Welcome to Turtl! Your account is active and you\'re ready to start using the app.',
+		'',
+		'However, sharing is disabled on your account until you confirm your email by going here:',
+		'',
+		confirmation_url,
+		'',
+		'You can resend this confirmation email at any time through the app by opening the Turtl menu and going to Your settings -> Resend confirmation',
+		'',
+		'Thanks!',
+		'- Turtl team',
+		].join('\n');
+	return email_model.send(config.app.emails.info, user.username, subject, body)
+		.catch(function(err) {
+			throw error.internal('problem sending confirmation email: '+err.message);
+		});
+};
+
 exports.confirm_user = function(email, token) {
-	return exports.get_by_email(email)
+	return exports.get_by_email(email, {raw: true})
 		.then(function(user) {
 			if(!user) throw error.not_found('that email isn\'t attached to an active account');
-			var data = user.data || {};
 			if(user.confirmed) throw error.conflict('that account has already been confirmed');
-			var server_token = data.confirmation_token;
+			var server_token = user.confirmation_token;
 			if(!server_token) throw error.internal('that account has no confirmation token');
 			if(!secure_compare(token, server_token)) throw error.bad_request('invalid confirmation token');
-			delete data.confirmation_token;
-			return db.update('users', user.id, {confirmed: true, data: data});
+			return db.update('users', user.id, {confirmed: true, confirmation_token: null});
 		})
 		.tap(function(user) {
 			return sync_model.add_record([user.id], user.id, 'user', user.id, 'edit');
@@ -171,6 +172,14 @@ exports.confirm_user = function(email, token) {
 			return invite_model.create_sync_records_for_email(user.id, email);
 		})
 		.then(clean_user);
+};
+
+exports.resend_confirmation = function(user_id) {
+	return db.by_id('users', user_id)
+		.then(function(user) {
+			if(!user) throw error.not_found('weird, your user account wasn\'t found');
+			return send_confirmation_email(user);
+		});
 };
 
 exports.delete = function(cur_user_id, user_id) {
@@ -217,9 +226,13 @@ exports.get_by_id = function(user_id, options) {
 		});
 };
 
-exports.get_by_email = function(email) {
+exports.get_by_email = function(email, options) {
+	options || (options = {});
 	return db.first('SELECT * FROM users WHERE username = {{email}} LIMIT 1', {email: email})
-		.then(clean_user);
+		.then(function(user) {
+			if(options.raw) return user;
+			return clean_user(user);
+		});
 };
 
 exports.calculate_storage = function(user_id) {

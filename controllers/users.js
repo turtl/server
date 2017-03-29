@@ -9,6 +9,7 @@ exports.route = function(app) {
 	app.post('/auth', authenticate);
 	app.get('/users/confirm/:email/:token', confirm_user);
 	app.delete('/users/:user_id', delete_account);
+	app.post('/users/confirmation/resend', resend_confirmation);
 };
 
 /**
@@ -46,6 +47,10 @@ var confirm_user = function(req, res) {
 			if(!err.app_error) log.error('confirm user error: ', err);
 			tres.redirect(res, config.app.www_url+'/users/confirm/error?err='+encodeURIComponent(err.message), {confirmed: false, error: err.message});
 		});
+};
+
+var resend_confirmation = function(req, res) {
+	tres.wrap(res, model.resend_confirmation(req.user.id));
 };
 
 /**

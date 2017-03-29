@@ -2,6 +2,7 @@
 
 var Promise = require('bluebird');
 var config = require('../helpers/config');
+var log = require('../helpers/log');
 var sendgrid = require('sendgrid')(config.sendgrid.apikey);
 var sendgrid_helper = require('sendgrid').mail;
 var email_enabled = config.sendgrid.enabled;
@@ -20,6 +21,7 @@ exports.send = function(from, to, subject, body) {
 		});
 		sendgrid.API(request, function(err, res) {
 			if(err) return reject(err);
+			log.info('email: '+to, subject);
 			resolve(res);
 		});
 	});
