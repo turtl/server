@@ -309,10 +309,16 @@ var process_incoming_sync = function(user_id, sync) {
 		return Promise.reject(error.bad_request('Missing sync handler for type `'+sync.type+'.'+sync.action+'` (allowed actions for '+sync.type+': ['+allowed_actions+'])'));
 	}
 	var handler = sync_type_handler[sync.action];
+	var handler_data = null;
 	if(sync.action == 'delete' && !sync_type_handler.skip_standard_delete) {
-		var promise = handler(user_id, item.id);
+		handler_data = item.id;
 	} else {
-		var promise = handler(user_id, sync.data);
+		handler_data = sync.data;
+	}
+	try {
+		var promise = handler(user_id, handler_data);
+	} catch(err) {
+		return Promise.reject(err);
 	}
 	return promise
 		.then(function(item_data) {
