@@ -158,6 +158,7 @@ var get_by_id = function(space_id, options) {
 	options || (options = {});
 	return db.by_id('spaces', space_id)
 		.then(function(space) {
+			if(!space) return false;
 			if(options.raw) return space;
 			return space.data;
 		});
@@ -220,6 +221,7 @@ exports.get_data_tree = function(space_id, options) {
 	options || (options = {});
 	var space_promise = get_by_id(space_id, {raw: true})
 		.then(function(space) {
+			if(!space) return false;
 			return populate_members([space], options);
 		})
 		.then(function(spaces) {
@@ -353,6 +355,7 @@ exports.simple_edit = function(sync_type, sync_table, sync_permission, get_by_id
 		var data = vlad.validate(sync_type, data);
 		return get_by_id(data.id)
 			.then(function(item_data) {
+				if(!item_data) throw error.not_found(sync_type+' '+data.id+' does not exist');
 				// preserve user_id/space_id
 				// And Charlie and I, we go down the sewer. And first thing we
 				// do is to preserve our clothes, we take... take our clothes
@@ -386,6 +389,7 @@ exports.simple_delete = function(sync_type, sync_table, sync_permissions, get_by
 		var space_id = null;
 		return get_by_id(item_id)
 			.then(function(item_data) {
+				if(!item_data) throw {doesnt_exist: true};
 				space_id = item_data.space_id;
 				return exports.permissions_check(user_id, space_id, sync_permissions);
 			})
@@ -395,9 +399,13 @@ exports.simple_delete = function(sync_type, sync_table, sync_permissions, get_by
 			.then(function() {
 				return exports.get_space_user_ids(space_id)
 					.then(function(user_ids) {
-						return symc_model.add_record(user_ids, user_id, sync_type, item_id, 'delete');
+						return sync_model.add_record(user_ids, user_id, sync_type, item_id, 'delete');
 					});
-			});
+			})
+			.catch(function(obj) { return obj.doesnt_exist === true; }, function() {
+				// silently ignore deleting something that doesn't exist.
+				return [];
+			})
 	};
 };
 
@@ -411,6 +419,7 @@ exports.simple_move_space = function(sync_type, sync_table, perms_delete, perms_
 		var item_id = data.id;
 		return get_by_id(item_id)
 			.then(function(cur_item_data) {
+				if(!cur_item_data) throw error.not_found('that space was not found');
 				var old_space_id = cur_item_data.space_id;
 				var new_space_id = data.space_id;
 				// the jackass catcher

@@ -18,7 +18,7 @@ vlad.define('keychain', {
  */
 var get_by_id = function(keychain_id) {
 	return db.by_id('keychain', keychain_id)
-		.then(function(entry) { return entry.data; });
+		.then(function(entry) { return entry && entry.data; });
 };
 
 exports.get_by_user = function(user_id) {
@@ -47,6 +47,7 @@ var edit = function(user_id, data) {
 	var data = vlad.validate('keychain', data);
 	return get_by_id(data.id)
 		.then(function(item_data) {
+			if(!item_data) throw error.not_found('that keychain entry is missing');
 			// preserve user_id
 			if(user_id != item_data.user_id) {
 				throw error.forbidden('you can\'t edit a keychain entry you don\'t own');

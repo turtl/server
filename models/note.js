@@ -28,7 +28,7 @@ vlad.define('note-file', {
 
 var get_by_id = function(note_id) {
 	return db.by_id('notes', note_id)
-		.then(function(note) { return note.data; });
+		.then(function(note) { return note && note.data; });
 };
 
 exports.get_by_spaces = function(space_ids) {

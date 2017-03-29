@@ -20,7 +20,7 @@ vlad.define('board', {
  */
 var get_by_id = function(board_id) {
 	return db.by_id('boards', board_id)
-		.then(function(board) { return board.data; });
+		.then(function(board) { return board && board.data; });
 };
 
 exports.get_by_spaces = function(space_ids) {
