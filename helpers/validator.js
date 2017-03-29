@@ -37,13 +37,15 @@ exports.validate = function(type, data) {
 	Object.keys(mapping).forEach(function(map_key) {
 		var field = mapping[map_key];
 		var val = data[map_key];
+		// treat null/undefined as the same
+		var is_empty = (val === undefined || val === null);
 		// if required and missing, complain
-		if(field.required && val === undefined) {
+		if(field.required && is_empty) {
 			throw new error.bad_request(type+' object failed validation: missing required field `'+map_key+'`');
 		}
 		// if missing and not required, set default if we have it, otherwise
 		// nothing to see here
-		if(val === undefined) {
+		if(is_empty) {
 			if(field.default) {
 				if(field.default instanceof Function) {
 					data[map_key] = field.default(data);
