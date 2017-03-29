@@ -375,7 +375,7 @@ exports.bulk_sync = function(user_id, sync_records) {
 				log.error('sync.bulk_sync() -- ', err);
 				// store the errmsg in the sync item itself, which will be
 				// returned to the client.
-				sync.error = err.message;
+				sync.error = {code: err.status, msg: err.message};
 				throw err;
 			});
 	}).catch(function(err) {
