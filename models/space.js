@@ -7,6 +7,7 @@ var vlad = require('../helpers/validator');
 var error = require('../helpers/error');
 var invite_model = require('./invite');
 var util = require('../helpers/util');
+var libperm = require('turtl-lib-permissions');
 
 vlad.define('space', {
 	id: {type: vlad.type.client_id, required: true},
@@ -15,61 +16,9 @@ vlad.define('space', {
 });
 
 // our roles
-var roles = {
-	owner: 'owner',
-	admin: 'admin',
-	moderator: 'moderator',
-	member: 'member',
-	guest: 'guest',
-};
-// permissions enum for actions allowed inside of a space
-var permissions = {
-	// spaces
-	edit_space: 'edit-space',
-	delete_space: 'delete-space',
-	set_space_owner: 'set-space-owner',
-	add_space_invite: 'add-space-invite',
-	edit_space_invite: 'edit-space-invite',
-	delete_space_invite: 'delete-space-invite',
-
-	// boards
-	add_board: 'add-board',
-	edit_board: 'edit-board',
-	delete_board: 'delete-board',
-
-	// notes
-	add_note: 'add-note',
-	edit_note: 'edit-note',
-	delete_note: 'delete-note',
-};
-// make a catch-all admin role that has all but a few permissions
-var admin_role = Object.keys(permissions).map(function(key) {
-	// some space actions are above admins
-	if(['set_space_owner', 'delete_space'].indexOf(key) >= 0) return;
-	return permissions[key];
-});
-// assign individual permissions for each role
-var role_permissions = {
-	owner: admin_role.concat([
-		permissions.set_space_owner,
-		permissions.delete_space,
-	]),
-	admin: admin_role,
-	moderator: [
-		permissions.add_board,
-		permissions.edit_board,
-		permissions.delete_board,
-		permissions.add_note,
-		permissions.edit_note,
-		permissions.delete_note,
-	],
-	member: [
-		permissions.add_note,
-		permissions.edit_note,
-		permissions.delete_note,
-	],
-	guest: [],	// haha read only suckerrrrAHAHAAHGGGGGGGGRRRRRGRYTHADJK;
-};
+var roles = libperm.roles;
+var permissions = libperm.permissions;
+var role_permissions = libperm.role_permissions;
 exports.permissions = permissions;
 exports.roles = roles;
 
