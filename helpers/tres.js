@@ -7,7 +7,7 @@ exports.send = function(res, data, options) {
 	var status = options.status || 200;
 	var content = options.content_type || 'application/json';
 	res.setHeader('Content-Type', content);
-	return res.status(status).send(JSON.stringify(data));
+	return res.status(status).send(options.raw ? data : JSON.stringify(data));
 };
 
 exports.redirect = function(res, url, data, options) {
@@ -16,7 +16,7 @@ exports.redirect = function(res, url, data, options) {
 	var content = options.content_type || 'application/json';
 	res.setHeader('Content-Type', content);
 	res.setHeader('Location', url);
-	return res.status(status).send(JSON.stringify(data));
+	return res.status(status).send(options.raw ? data : JSON.stringify(data));
 };
 
 exports.err = function(res, err, options) {
