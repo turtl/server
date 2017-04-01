@@ -168,6 +168,7 @@ exports.accept = function(user_id, space_id, invite_id) {
 			return user_model.get_by_id(user_id)
 				.then(function(user) {
 					if(user.username != invite.to_user) throw error.forbidden('that invite wasn\'t sent to your email ('+user.username+')');
+					if(!user.confirmed) throw error.forbidden('you must confirm your account to accept an invite');
 					return space_model.user_is_in_space(user_id, space_id);
 				})
 				.then(function(spaceuser) {
