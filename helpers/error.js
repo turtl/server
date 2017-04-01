@@ -19,9 +19,9 @@ exports.conflict = make_err_fn(409);
 exports.internal = make_err_fn(500);
 
 // some utils for skipping over promise chains
-exports.promise_throw = function(reason) {
+exports.promise_throw = function(reason, data) {
 	var obj = {};
-	obj[reason] = true;
+	obj[reason] = data || true;
 	throw obj;
 };
 exports.promise_catch = function(reason) {

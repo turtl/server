@@ -47,15 +47,15 @@ var delete_invite = function(space_id, invite_id) {
 var create_outgoing_invite_sync_record = function(user_id, space_id, invite_id, action) {
 	return get_by_id(space_id, invite_id)
 		.then(function(invite) {
-			if(!invite) throw {invite_empty: true};
+			if(!invite) error.promise_throw('invite_empty');
 			return user_model.get_by_email(invite.to_user);
 		})
 		.then(function(to_user) {
-			if(!to_user) throw {invite_empty: true};
+			if(!to_user) error.promise_throw('invite_empty');
 			var user_ids = [to_user.id];
 			return sync_model.add_record(user_ids, user_id, 'invite', invite_id, action);
 		})
-		.catch(function(err) { return err.invite_empty === true; }, function(err) {
+		.catch(error.promise_catch('invite_empty'), function(err) {
 			return [];
 		});
 };
@@ -81,7 +81,7 @@ exports.send = function(user_id, to_user_email, space_id, data) {
 		})
 		.then(function(exists) {
 			// don't re-create an existing invite. skip it, don't email, etc etc
-			if(exists) throw {already_exists: exists};
+			if(exists) error.promise_throw('already_exists', exists);
 
 			return db.insert('spaces_invites', {
 				from_user_id: user_id,
@@ -154,7 +154,7 @@ exports.send = function(user_id, to_user_email, space_id, data) {
 			inv.sync_ids = space_sync_ids.concat(invite_sync_ids);
 			return inv;
 		})
-		.catch(function(err) { return err.already_exists; }, function(err) {
+		.catch(error.promise_catch('already_exists'), function(err) {
 			var inv = err.already_exists.data;
 			inv.sync_ids = [];
 			return inv;

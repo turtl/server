@@ -389,7 +389,7 @@ exports.simple_delete = function(sync_type, sync_table, sync_permissions, get_by
 		var space_id = null;
 		return get_by_id(item_id)
 			.then(function(item_data) {
-				if(!item_data) throw {doesnt_exist: true};
+				if(!item_data) error.promise_throw('doesnt_exist');
 				space_id = item_data.space_id;
 				return exports.permissions_check(user_id, space_id, sync_permissions);
 			})
@@ -402,7 +402,7 @@ exports.simple_delete = function(sync_type, sync_table, sync_permissions, get_by
 						return sync_model.add_record(user_ids, user_id, sync_type, item_id, 'delete');
 					});
 			})
-			.catch(function(obj) { return obj.doesnt_exist === true; }, function() {
+			.catch(error.promise_catch('doesnt_exist'), function() {
 				// silently ignore deleting something that doesn't exist.
 				return [];
 			})
@@ -424,7 +424,7 @@ exports.simple_move_space = function(sync_type, sync_table, perms_delete, perms_
 				var new_space_id = data.space_id;
 				// the jackass catcher
 				if(old_space_id == new_space_id) {
-					throw {skip: true, item: cur_item_data};
+					error.promise_throw('same_space', cur_item_data);
 				}
 				return Promise.all([
 					cur_item_data,
@@ -474,8 +474,8 @@ exports.simple_move_space = function(sync_type, sync_table, perms_delete, perms_
 						item.sync_ids = item.sync_ids.concat(sync_ids);
 					});
 			})
-			.catch(function(err) { return err.skip === true; }, function(err) {
-				var item = err.item;
+			.catch(error.promise_catch('same_space'), function(err) {
+				var item = err.same_space;
 				item.sync_ids = [];
 				return item;
 			});

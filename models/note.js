@@ -167,7 +167,7 @@ var delete_note_file = function(user_id, note_id) {
 		})
 		.tap(function(note) {
 			var data = note.data || {};
-			if(!data.has_file) throw {missing_file: true};
+			if(!data.has_file) error.promise_throw('missing_file');
 			return file_model.delete_attachment(note_id);
 		})
 		.tap(function(note) {
@@ -183,7 +183,7 @@ var delete_note_file = function(user_id, note_id) {
 					return sync_model.add_record(user_ids, user_id, 'note', note.id, 'edit');
 				});
 		})
-		.catch(function(err) { return err.missing_file === true; }, function(err) {
+		.catch(error.promise_catch('missing_file'), function(err) {
 			return [];
 		});
 };
