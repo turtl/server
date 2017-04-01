@@ -70,34 +70,57 @@ var builder = function(qry, query_data) {
 // use this to wrap your arguments to be injected as literals. literally.
 exports.literal = function(val) { return {_omg_literally: val}; };
 
+var make_client = function(client, release) {
+	return {
+		query: function(qry, query_data, options) {
+			options || (options = {});
+			var query_type = options.type;
+			var built = builder(qry, query_data);
+			var qry = built.query;
+			var vals = built.vals;
+
+			log.debug('db: query: ', qry, vals);
+			return new Promise(function(resolve, reject) {
+				client.query(qry, vals, function(err, result) {
+					if(err) return reject(err);
+					switch((query_type || result.command).toLowerCase())
+					{
+						case 'select': resolve(result.rows); break;
+						default: resolve(result); break;
+					}
+				});
+			});
+		},
+
+		close: function() {
+			return release();
+		}
+	};
+};
+
+exports.client = function() {
+	return new Promise(function(resolve, reject) {
+		pg.connect(connection, function(err, client, release) {
+			if(err) return reject(err);
+			resolve(make_client(client, release));
+		});
+	});
+};
+
 /**
  * run a query, using a pooled connection, and return the result as a finished
  * promise.
  */
 exports.query = function(qry, query_data, options) {
-	options || (options = {});
-
-	var query_type = options.type;
-	var built = builder(qry, query_data);
-	var qry = built.query;
-	var vals = built.vals;
-
-	log.debug('db: query: ', qry, vals);
-
-	return new Promise(function(resolve, reject) {
-		pg.connect(connection, function(err, client, release) {
-			if(err) return reject(err);
-			client.query(qry, vals, function(err, result) {
-				release();
-				if(err) return reject(err);
-				switch((query_type || result.command).toLowerCase())
-				{
-					case 'select': resolve(result.rows); break;
-					default: resolve(result); break;
-				}
-			});
+	var client = null;
+	return exports.client()
+		.then(function(_client) {
+			client = _client;
+			return client.query(qry, query_data, options);
+		})
+		.finally(function() {
+			return client && client.close();
 		});
-	});
 };
 
 /**
