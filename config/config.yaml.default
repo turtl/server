@@ -17,6 +17,7 @@ app:
   api_url: 'http://api.yourdomain.com:8181'
   www_url: 'https://yourdomain.com'
   emails:
+    admin: 'admin@turtlapp.com'
     info: 'Turtl <info@turtlapp.com>'
     invites: 'invites@turtlapp.com'
   # TODO: replace this with a long, unique value. seriously. write down a dream

@@ -77,6 +77,15 @@ builder.table('boards', {
 	],
 });
 
+builder.table('cla', {
+	fields: {
+		id: ty.pk_int,
+		fullname: builder.not_null(ty.text),
+		email: builder.not_null(ty.text),
+		sigdata: ty.json,
+	},
+});
+
 builder.table('errorlog', {
 	fields: {
 		id: ty.pk,
