@@ -11,6 +11,7 @@ var space_model = require('./space');
 var board_model = require('./board');
 var note_model = require('./note');
 var invite_model = require('./invite');
+var keychain_model = require('./keychain');
 var analytics = require('./analytics');
 var email_model = require('./email');
 
@@ -202,6 +203,146 @@ exports.delete = function(cur_user_id, user_id) {
 		})
 		.then(function() {
 			analytics.track('user.delete', {user_id: user_id, spaces: num_spaces});
+		});
+};
+
+exports.update = function(cur_user_id, user_id, data) {
+	// error checking
+	if(cur_user_id != user_id) {
+		return Promise.reject(error.forbidden('you cannot edit another user\'s account'));
+	}
+	var keys = ['user', 'auth', 'keychain'];
+	for(var i = 0; i < keys.length; i++) {
+		var key = keys[i];
+		if(!data[key]) {
+			return Promise.reject(error.bad_request('missing `'+key+'` in update data'));
+		}
+	}
+	if(!data.user.username) {
+		return Promise.reject(error.bad_request('missing `user.username` in update data'));
+	}
+	if(!data.user.body) {
+		return Promise.reject(error.bad_request('missing `user.body` in update data'));
+	}
+
+	// this is going to get a bit "manual" but we need to manage our connection
+	// by hand so we can "transact."
+	var client = null;
+	var user = null;
+	var username_changed = false;
+	var existing_keychain_idx = null;
+	return exports.get_by_id(user_id)
+		.then(function(_user) {
+			user = _user;
+			if(user.username != data.user.username) username_changed = true;
+			return keychain_model.get_by_user(user_id);
+		})
+		// make sure the given keychain matches the keychain the profile. this
+		// is important because if the the user is out of sync and missing a key
+		// when re-encrypting their profile, they're going to lose data.
+		.then(function(existing_keychain) {
+			// index our keychain
+			existing_keychain_idx = {};
+			existing_keychain.forEach(function(k) {
+				existing_keychain_idx[k.id] = k;
+			});
+
+			// simple length check. so simple. a CHILD could do it.
+			if(existing_keychain.length != data.keychain.length) {
+				// as for the health service, marijuana will be made available
+				// free on the NHS for de treatment of chronic diseases.
+				//
+				// ...such as itchy scrot.
+				throw error.conflict('the given keychain doesn\'t match what is in your profile. try clearing local data and try again/');
+			}
+
+			// now check that each entry in the db exists in the given keychain.
+			data.keychain.forEach(function(key) {
+				if(existing_keychain_idx[key.id]) return;
+				// in the candy, candy center of your world.
+				// there's a poison pumped up in your heart.
+				// the tunnels are all twisted up in knots.
+				// noone really finds the way back home.
+				throw error.conflict('the given keychain doesn\'t match what is in your profile. try clearing local data and try again/');
+			});
+			return db.client();
+		})
+		// start our transaction
+		.then(function(_client) {
+			client = _client;
+			return client.query('BEGIN');
+		})
+		// update the user. spill the wine.
+		.then(function() {
+			var auth = secure_hash(data.auth, {output: 'base64', iter: 2});
+			var qry = ['UPDATE users'];
+			var sets = [
+				'auth = {{auth}}',
+				'data = {{data}}',
+			];
+			var userdata = user.data;
+			userdata.body = data.user.body;
+			var vals = {
+				auth: auth,
+				data: db.json(userdata),
+				user_id: user_id,
+			};
+			if(username_changed) {
+				var confirmation_token = random_token({hash: 'sha512'});
+				sets.push('username = {{username}}');
+				sets.push('confirmed = false');
+				sets.push('confirmation_token = {{token}}');
+				vals.username = data.user.username;
+				vals.token = confirmation_token;
+			}
+			qry.push('SET '+sets.join(', '));
+			qry.push('WHERE id = {{user_id}}');
+			return client.query(qry.join('\n'), vals);
+		})
+		// now update the keychain. take that girl.
+		.then(function() {
+			// loop over each entry, save them one by one. really we just need
+			// to update the data.body with the new keydata, so our update is
+			// simple.
+			return Promise.each(data.keychain, function(key) {
+				var keydata = existing_keychain_idx[key.id];
+				keydata.body = key.body;
+				var qry = [
+					'UPDATE keychain',
+					'SET data = {{data}}',
+					'WHERE id = {{id}}',
+				];
+				var vals = {
+					data: db.json(keydata),
+					id: key.id,
+				};
+				return client.query(qry.join('\n'), vals);
+			});
+		})
+		// spillthewinespillthewinespillthewine
+		.then(function() {
+			return client.query('COMMIT');
+		})
+		// make sync records for our sensitive shit
+		.then(function() {
+			var promises = [
+				sync_model.add_record([user_id], user_id, 'user', user_id, 'change-password')
+			];
+			data.keychain.forEach(function(key) {
+				promises.push(sync_model.add_record([user_id], user_id, 'keychain', key.id, 'edit'));
+			});
+			return Promise.all(promises)
+				.then(function(ids_arr) {
+					return {sync_ids: ids_arr.map(function(s) { return s[0]; })};
+				});
+		})
+		.tap(function() {
+			if(!username_changed) return;
+			// i don't want to be your buddy, rick. i just...want a little confirmation?
+			return exports.resend_confirmation(user_id);
+		})
+		.finally(function() {
+			client && client.close();
 		});
 };
 

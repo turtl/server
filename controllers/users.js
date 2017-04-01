@@ -10,6 +10,7 @@ exports.route = function(app) {
 	app.get('/users/confirm/:email/:token', confirm_user);
 	app.delete('/users/:user_id', delete_account);
 	app.post('/users/confirmation/resend', resend_confirmation);
+	app.put('/users/:user_id', update_user);
 };
 
 /**
@@ -60,5 +61,17 @@ var delete_account = function(req, res) {
 	var cur_user_id = req.user.id;
 	var user_id = req.params.user_id;
 	tres.wrap(res, model.delete(cur_user_id, user_id));
+};
+
+/**
+ * edit a user. requires a username, an auth token, and the user's entire
+ * (encrypted) keychain. this specifically goes outside of the sync system
+ * because this is a change that must be ALL OR NOTHING.
+ */
+var update_user = function(req, res) {
+	var cur_user_id = req.user.id;
+	var user_id = req.params.user_id;
+	var data = req.body;
+	tres.wrap(res, model.update(cur_user_id, user_id, data));
 };
 
