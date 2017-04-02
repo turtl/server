@@ -179,6 +179,7 @@ exports.resend_confirmation = function(user_id) {
 	return db.by_id('users', user_id)
 		.then(function(user) {
 			if(!user) throw error.not_found('weird, your user account wasn\'t found');
+			if(user.confirmed) throw error.bad_request('your account is already confirmed');
 			return send_confirmation_email(user);
 		});
 };
