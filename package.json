@@ -16,7 +16,8 @@
     "mixpanel": "0.6.0",
     "morgan": "1.7.0",
     "pg": "6.1.2",
-    "s3-upload-stream": "^1.0.7",
+    "request": "2.81.0",
+    "s3-upload-stream": "1.0.7",
     "sendgrid": "4.7.1",
     "turtl-lib-permissions": "git+https://github.com/turtl/lib-permissions.git#master",
     "winston": "2.3.0"

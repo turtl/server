@@ -27,8 +27,12 @@ app.get('/', function(req, res) {
 	tres.send(res, {greeting: "turtl is a good app. it's the best app. a lot of people are saying it's the best app. what does it do? i don't know exactly...i have people that handle this sort of thing for me, but trust me you're going to love this app."});
 });
 
-['users', 'sync', 'spaces', 'files', 'feedback', 'errlog', 'cla']
+['users', 'sync', 'spaces', 'files', 'feedback', 'errlog', 'cla', 'bookmarking']
 	.forEach(function(con) {
+		// only load bookmarking controller if we REALLY specify we want it
+		if(con == 'bookmarking' && config.app.enable_bookmarker_proxy != 'I UNDERSTAND THIS VIOLATES THE PRIVACY OF MY USERS') {
+			return;
+		}
 		log.info('Loading controller: '+con);
 		var controller = require('./controllers/'+con);
 		controller.route(app);
