@@ -32,9 +32,13 @@ exports.err = function(res, err, options) {
 	return res.status(status).send(JSON.stringify(errobj));
 };
 
-exports.wrap = function(res, promise) {
+exports.wrap = function(res, promise, options) {
 	return promise
-		.then(exports.send.bind(exports, res))
-		.catch(exports.err.bind(exports, res));
+		.then(function(data) {
+			return exports.send(res, data, options);
+		})
+		.catch(function(err) {
+			return exports.err(res, err, options);
+		});
 };
 

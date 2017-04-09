@@ -9,6 +9,6 @@ exports.route = function(app) {
 
 var proxy_url = function(req, res) {
 	var url = req.query.url;
-	tres.wrap(res, model.proxy_url(url));
+	tres.wrap(res, model.proxy_url(url), {raw: true, content_type: 'text/html'});
 };
 
