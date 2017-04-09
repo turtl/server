@@ -16,6 +16,10 @@ vlad.define('space', {
 	body: {type: vlad.type.string},
 });
 
+vlad.define('space-member', {
+	role: {type: vlad.type.string, required: true},
+});
+
 // our roles
 var roles = libperm.roles;
 var permissions = libperm.permissions;
@@ -200,6 +204,51 @@ exports.get_data_tree = function(space_id, options) {
 	])
 };
 
+exports.update_member = function(user_id, space_id, member_user_id, data) {
+	return exports.permissions_check(user_id, space_id, permissions.edit_space_member)
+		.then(function() {
+			return get_space_user_record(member_user_id, space_id);
+		})
+		.then(function(member) {
+			if(member.role == roles.owner) {
+				throw error.bad_request('you cannot edit the owner');
+			}
+			var data = vlad.validate('space-member', data);
+			return db.update('spaces_users', member.id, data);
+		})
+		.then(function() {
+			return exports.get_space_user_ids(space_id)
+				.then(function(user_ids) {
+					return sync_model.add_record(user_ids, user_id, 'space', space_id, 'edit');
+				})
+		})
+		.then(function(sync_ids) {
+			return {sync_ids: sync_ids};
+		});
+};
+
+exports.delete_member = function(user_id, space_id, member_user_id) {
+	return exports.permissions_check(user_id, space_id, permissions.delete_space_member)
+		.then(function() {
+			return get_space_user_record(member_user_id, space_id);
+		})
+		.then(function(member) {
+			if(member.role == roles.owner) {
+				throw error.bad_request('you cannot delete the owner');
+			}
+			return db.delete('spaces_users', member.id);
+		})
+		.then(function() {
+			return exports.get_space_user_ids(space_id)
+				.then(function(user_ids) {
+					return sync_model.add_record(user_ids, user_id, 'space', space_id, 'edit');
+				})
+		})
+		.then(function(sync_ids) {
+			return {sync_ids: sync_ids};
+		});
+};
+
 var add = function(user_id, data) {
 	data.user_id = user_id;
 	var data = vlad.validate('space', data);
@@ -230,7 +279,7 @@ var edit = function(user_id, data) {
 		.tap(function(space) {
 			return exports.get_space_user_ids(space_id)
 				.then(function(user_ids) {
-					return sync_model.add_record(user_ids, user_id, 'space', space_id, 'edit')
+					return sync_model.add_record(user_ids, user_id, 'space', space_id, 'edit');
 				})
 				.then(function(sync_ids) {
 					space.sync_ids = sync_ids;
