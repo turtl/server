@@ -3,6 +3,7 @@
 var db = require('../helpers/db');
 var Promise = require('bluebird');
 var sync_model = require('./sync');
+var user_model = require('./user');
 var vlad = require('../helpers/validator');
 var error = require('../helpers/error');
 var invite_model = require('./invite');
@@ -70,11 +71,27 @@ var populate_members = function(spaces, options) {
 
 	if(spaces.length == 0) return Promise.resolve(spaces);
 	var space_ids = spaces.map(function(s) { return s.id; });
+	var member_promise = db.by_ids('spaces_users', space_ids, {id_field: 'space_id'})
+		.then(function(members) {
+			var user_ids = members.map(function(m) { return m.user_id; });
+			return user_model.get_by_ids(user_ids)
+				.then(function(users) {
+					var user_idx = {};
+					users.forEach(function(u) { user_idx[u.id] = u; });
+
+					members.forEach(function(member) {
+						var user = user_idx[member.user_id];
+						if(!user) return;
+						member.username = user.username;
+					});
+					return members;
+				});
+		});
 	var invite_promise = skip_invites ?
 		Promise.resolve([]) :
 		invite_model.get_by_spaces_ids(space_ids);
 	var promises = [
-		db.by_ids('spaces_users', space_ids, {id_field: 'space_id'}),
+		member_promise,
 		invite_promise,
 	];
 	return Promise.all(promises)
