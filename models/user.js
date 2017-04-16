@@ -372,7 +372,15 @@ exports.get_by_email = function(email, options) {
 	options || (options = {});
 	return db.first('SELECT * FROM users WHERE username = {{email}} LIMIT 1', {email: email})
 		.then(function(user) {
+			if(!user) return false;
 			if(options.raw) return user;
+			if(options.data) {
+				var data = user.data;
+				['id', 'username', 'storage_mb', 'confirmed'].forEach(function(field) {
+					data[field] = user[field];
+				});
+				return data;
+			}
 			return clean_user(user);
 		});
 };

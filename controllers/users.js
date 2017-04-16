@@ -6,6 +6,7 @@ var log = require('../helpers/log');
 exports.route = function(app) {
 	app.post('/users', join);
 	app.get('/users/:user_id', get_by_id);
+	app.get('/users/email/:email', get_by_email);
 	app.post('/auth', authenticate);
 	app.get('/users/confirm/:email/:token', confirm_user);
 	app.delete('/users/:user_id', delete_account);
@@ -28,6 +29,16 @@ var get_by_id = function(req, res) {
 		return tres.err(res, new Error('you can\'t grab another user\'s info'));
 	}
 	tres.wrap(res, model.get_by_id(user_id, {data: true}));
+};
+
+var get_by_email = function(req, res) {
+	var email = req.params.email;
+	var promise = model.get_by_email(email, {data: true})
+		.tap(function(user) { 
+			delete user.body;
+			delete user.storage_mb;
+		});
+	tres.wrap(res, promise);
 };
 
 /**
