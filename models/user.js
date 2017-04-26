@@ -16,6 +16,7 @@ var analytics = require('./analytics');
 var email_model = require('./email');
 
 vlad.define('user', {
+	username: {type: vlad.type.email},
 	pubkey: {type: vlad.type.string},
 	name: {type: vlad.type.string},
 	body: {type: vlad.type.string},
@@ -37,12 +38,13 @@ exports.secure_hash = secure_hash;
 /**
  * who needs constant-time comparisons when you can just double-hmac?
  *
- * find out why this one app has password crackers FURIOUS!!!
+ * find out why this one weird app has password crackers FURIOUS!!!
  */
 var secure_compare = function(secret1, secret2) {
 	var now = new Date().getTime();
-	var hmac1 = crypto.createHmac('sha256', now+'|'+config.app.secure_hash_salt).update(secret1).digest('base64');
-	var hmac2 = crypto.createHmac('sha256', now+'|'+config.app.secure_hash_salt).update(secret2).digest('base64');
+	var key = now+'|'+config.app.secure_hash_salt;
+	var hmac1 = crypto.createHmac('sha256', key).update(secret1).digest('base64');
+	var hmac2 = crypto.createHmac('sha256', key).update(secret2).digest('base64');
 	return hmac1 == hmac2;
 };
 
@@ -91,7 +93,11 @@ exports.join = function(userdata) {
 	if(!userdata.auth) return Promise.reject(error.bad_request('missing `auth` key'));
 	if(!userdata.username) return Promise.reject(error.bad_request('missing `username` key (must be a valid email)'));
 	if(!userdata.username.match(/@/)) return Promise.reject(error.bad_request('please enter a valid email'));
-	var data = vlad.validate('user', userdata.data || {});
+	try {
+		var data = vlad.validate('user', userdata.data || {});
+	} catch(e) {
+		return Promise.reject(e);
+	}
 
 	// create a confirmation token
 	var token = random_token({hash: 'sha512'});
@@ -204,6 +210,7 @@ exports.delete = function(cur_user_id, user_id) {
 		})
 		.then(function() {
 			analytics.track('user.delete', {user_id: user_id, spaces: num_spaces});
+			return true;
 		});
 };
 

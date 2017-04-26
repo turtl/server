@@ -14,6 +14,7 @@ var types = {
 	int: function(d) { return !!parseInt(d); },
 	array: function(d) { return Array.isArray(d); },
 	string: function(d) { return typeof(d) == 'string'; },
+	email: function(d) { return d.toString().match(/.@./); },
 	object: function(d) { return typeof(d) == 'object' && !Array.isArray(d); },
 	float: function(d) { return !!parseFloat(d); },
 	bool: function(d) { return d === true || d === false; },
@@ -34,6 +35,7 @@ exports.define = function(type, mapping) {
 exports.validate = function(type, data) {
 	var mapping = mappings[type];
 	if(!mapping) throw new error.internal('unknown validation type: `'+type+'`');
+	if(!data) throw new error.internal('bad data passed to validator: '+typeof(data));
 	Object.keys(mapping).forEach(function(map_key) {
 		var field = mapping[map_key];
 		var val = data[map_key];
@@ -66,16 +68,5 @@ exports.validate = function(type, data) {
 		if(!mapping[data_key]) delete data[data_key];
 	});
 	return data;
-};
-
-/**
- * our shitty (but permissive, so also not shitty at all) email validator
- */
-exports.email = function(email) {
-	var bad_email = error.bad_request('invalid email given');
-	if(!email) throw bad_email;
-	if(typeof(email) != 'string') throw bad_email;
-	if(email.indexOf('@') < 0) throw bad_email;
-	return true;
 };
 
