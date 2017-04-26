@@ -69,7 +69,7 @@ builder.table('app', {
 builder.table('boards', {
 	fields: {
 		id: ty.pk,
-		space_id: ty.id,
+		space_id: builder.not_null(ty.id),
 		data: ty.json,
 	},
 	indexes: [
@@ -96,7 +96,7 @@ builder.table('errorlog', {
 builder.table('keychain', {
 	fields: {
 		id: ty.pk,
-		user_id: ty.id_int,
+		user_id: builder.not_null(ty.id_int),
 		data: ty.json,
 	},
 	indexes: [
@@ -107,7 +107,7 @@ builder.table('keychain', {
 builder.table('notes', {
 	fields: {
 		id: ty.pk,
-		space_id: ty.id,
+		space_id: builder.not_null(ty.id),
 		board_id: ty.id,
 		data: ty.json
 	},
@@ -126,9 +126,9 @@ builder.table('spaces', {
 builder.table('spaces_invites', {
 	fields: {
 		id: ty.pk,
-		space_id: ty.id,
-		from_user_id: ty.id_int,
-		to_user: ty.text,
+		space_id: builder.not_null(ty.id),
+		from_user_id: builder.not_null(ty.id_int),
+		to_user: builder.not_null(ty.text),
 		data: ty.json,
 	},
 	indexes: [
@@ -141,30 +141,30 @@ builder.table('spaces_invites', {
 builder.table('spaces_users', {
 	fields: {
 		id: ty.pk_int,
-		space_id: ty.id,
-		user_id: ty.id_int,
-		role: ty.varchar(24),
+		space_id: builder.not_null(ty.id),
+		user_id: builder.not_null(ty.id_int),
+		role: builder.not_null(ty.varchar(24)),
 	},
 	indexes: [
-		{name: 'user_id', fields: ['user_id']},
+		{name: 'user_id', fields: ['space_id', 'user_id']},
 	],
 });
 
 builder.table('sync', {
 	fields: {
 		id: ty.pk_int,
-		item_id: ty.id,
-		type: ty.text,
-		action: ty.varchar(32),
-		user_id: ty.id_int,
+		item_id: builder.not_null(ty.id),
+		type: builder.not_null(ty.text),
+		action: builder.not_null(ty.varchar(32)),
+		user_id: builder.not_null(ty.id_int),
 	},
 });
 
 builder.table('sync_users', {
 	fields: {
 		id: ty.pk_int,
-		sync_id: ty.id_int,
-		user_id: ty.id,
+		sync_id: builder.not_null(ty.id_int),
+		user_id: builder.not_null(ty.id),
 	},
 	indexes: [
 		{name: 'user_id', fields: ['user_id']},
@@ -175,8 +175,8 @@ builder.table('users', {
 	fields: {
 		id: ty.pk_int,
 		username: builder.not_null(ty.text),
-		auth: ty.text,
-		confirmed: ty.bool,
+		auth: builder.not_null(ty.text),
+		confirmed: builder.not_null(ty.bool),
 		confirmation_token: ty.text,
 		data: ty.json,
 		storage_mb: ty.int,
