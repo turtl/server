@@ -14,8 +14,10 @@ var analytics = require('./analytics');
 vlad.define('invite', {
 	id: {type: vlad.type.client_id, required: true},
 	space_id: {type: vlad.type.client_id, required: true},
+	to_user: {type: vlad.type.email, required: true},
 	role: {type: vlad.type.string, required: true},
-	has_password: {type: vlad.type.bool, required: true},
+	is_passphrase_protected: {type: vlad.type.bool, required: true},
+	is_pubkey_protected: {type: vlad.type.bool, required: true},
 	title: {type: vlad.type.string, required: true},
 	body: {type: vlad.type.string},
 });
@@ -40,7 +42,7 @@ var clean = function(invite) {
 };
 
 var delete_invite = function(space_id, invite_id) {
-	var qry = 'DELETE FROM invites WHERE invite_id = {{invite_id}} AND space_id = {{space_id}}';
+	var qry = 'DELETE FROM spaces_invites WHERE id = {{invite_id}} AND space_id = {{space_id}}';
 	return db.query(qry, {invite_id: invite_id, space_id: space_id});
 };
 
@@ -71,19 +73,32 @@ exports.create_sync_records_for_email = function(user_id, email) {
 		});
 };
 
-exports.send = function(user_id, to_user_email, space_id, data) {
+exports.send = function(user_id, space_id, data) {
 	var invite;
-	var data = vlad.validate('invite', data);
-	vlad.email(to_user_email);
+	try {
+		var data = vlad.validate('invite', data);
+	} catch(e) {
+		return Promise.reject(e);
+	}
+	if(space_id != data.space_id) return Promise.reject(error.bad_request('space_id passed does not match space_id in data'));
+
+	var to_user_email = data.to_user;
 	return space_model.permissions_check(user_id, space_id, space_model.permissions.add_space_invite)
 		.then(function() {
-			return invite_exists(space_id, to_user_email);
+			return Promise.all([
+				invite_exists(space_id, to_user_email),
+				space_model.member_exists(space_id, to_user_email),
+			]);
 		})
-		.then(function(exists) {
+		.spread(function(invite_exists, member_exists) {
 			// don't re-create an existing invite. skip it, don't email, etc etc
-			if(exists) error.promise_throw('already_exists', exists);
+			if(invite_exists) error.promise_throw('already_exists', invite_exists);
+			// don't allow inviting a current member. that's jsut stupid.
+			if(member_exists) error.promise_throw('already_exists', member_exists);
 
 			return db.insert('spaces_invites', {
+				id: data.id,
+				space_id: space_id,
 				from_user_id: user_id,
 				to_user: to_user_email,
 				data: db.json(data),
@@ -99,7 +114,7 @@ exports.send = function(user_id, to_user_email, space_id, data) {
 		})
 		.spread(function(to_user, from_user) {
 			var invite_title = data.title;
-			var subject = 'You have been invited to "'+invite_title+'" by '+from_user.username;
+			var subject = 'You have been invited to a Turtl space by '+from_user.username;
 			var name = (from_user.data || {}).name;
 			var name = name ? name + ' ('+from_user.username+')' : from_user.username;
 			var action = '';
@@ -119,7 +134,7 @@ exports.send = function(user_id, to_user_email, space_id, data) {
 				].join(' ');
 			}
 			var body = [
-				'Hello. You have been invited by '+name+' to "'+invite_title+'".',
+				'Hello. You have been sent an invite by '+name+': '+invite_title,
 				'',
 				action,
 				'',
@@ -216,7 +231,8 @@ exports.update = function(user_id, space_id, invite_id, data) {
 				data: invite_data
 			};
 			return db.update('spaces_invites', invite_id, update)
-				.tap(function(item) {
+				.then(function(item) {
+					var inv = item.data;
 					return space_model.get_space_user_ids(space_id)
 						.then(function(user_ids) {
 							// do an "edit" sync on the space, not the invite.
@@ -226,7 +242,8 @@ exports.update = function(user_id, space_id, invite_id, data) {
 							]);
 						})
 						.spread(function(sync_ids, invite_sync_ids) {
-							item.sync_ids = sync_ids.concat(invite_sync_ids);
+							inv.sync_ids = sync_ids.concat(invite_sync_ids);
+							return inv;
 						});
 				});
 		});
@@ -254,7 +271,7 @@ exports.get_by_to_email = function(to_email) {
  * get all invites for a particular space
  */
 exports.get_by_space_id = function(space_id) {
-	return db.query('SELECT data FROM invites WHERE space_id = {{space_id}}', {space_id: space_id})
+	return db.query('SELECT data FROM spaces_invites WHERE space_id = {{space_id}}', {space_id: space_id})
 		.then(function(invites) {
 			return invites.map(function(i) { return i.data; });
 		});

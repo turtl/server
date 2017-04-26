@@ -31,9 +31,8 @@ var delete_member = function(req, res) {
 var send_invite = function(req, res) {
 	var from_user_id = req.user.id;
 	var data = req.body;
-	var to_user = data.to_user;
 	var space_id = req.params.space_id;
-	tres.wrap(res, invite_model.send(from_user_id, to_user, space_id, data));
+	tres.wrap(res, invite_model.send(from_user_id, space_id, data));
 };
 
 var update_invite = function(req, res) {

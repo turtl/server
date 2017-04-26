@@ -67,6 +67,30 @@ exports.user_is_in_space = function(user_id, space_id) {
 };
 
 /**
+ * Checks if a user is current in a space (by their email). Mainly used to keep
+ * from sending invites to existing members.
+ */
+exports.member_exists = function(space_id, email) {
+	var qry = [
+		'SELECT',
+		'	su.id',
+		'FROM',
+		'	spaces_users su,',
+		'	users u',
+		'WHERE',
+		'	su.space_id = {{space_id}} AND',
+		'	su.user_id = u.id AND',
+		'	u.username = {{email}}',
+		'LIMIT 1',
+	];
+	return db.first(qry.join('\n'), {space_id: space_id, email: email})
+		.then(function(rec) {
+			if(rec) return true;
+			return false;
+		});
+};
+
+/**
  * populates member data for a set of spaces
  */
 var populate_members = function(spaces, options) {
@@ -115,7 +139,7 @@ var populate_members = function(spaces, options) {
 				if(!space) return;
 				if(!space.data) space.data = {};
 				if(!space.data.invites) space.data.invites = [];
-				space.data.invites.push(invite);
+				space.data.invites.push(invite.data);
 			});
 			return spaces;
 		});
@@ -261,6 +285,9 @@ var add = function(user_id, data) {
 				.then(function(sync_ids) {
 					space.sync_ids = sync_ids;
 				});
+		})
+		.tap(function(space) {
+			return populate_members([space]);
 		});
 };
 
@@ -284,6 +311,9 @@ var edit = function(user_id, data) {
 				.then(function(sync_ids) {
 					space.sync_ids = sync_ids;
 				});
+		})
+		.tap(function(space) {
+			return populate_members([space]);
 		});
 };
 
@@ -313,7 +343,7 @@ var del = function(user_id, space_id) {
 exports.delete_space = del;
 
 var link = function(ids) {
-	return db.by_ids('spaces', ids, {fields: ['data']})
+	return db.by_ids('spaces', ids, {fields: ['id', 'data']})
 		.then(function(spaces) {
 			return populate_members(spaces);
 		})
