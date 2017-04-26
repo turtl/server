@@ -260,10 +260,10 @@ exports.delete = function(user_id, space_id, invite_id) {
 };
 
 exports.get_by_to_email = function(to_email) {
-	var qry = 'SELECT data FROM spaces_invites WHERE to_user = {{email}}';
+	var qry = 'SELECT id FROM spaces_invites WHERE to_user = {{email}}';
 	return db.query(qry, {email: to_email})
 		.then(function(invites) {
-			return (invites || []).map(function(inv) { return inv.data; });
+			return link(invites.map(function(i) { return i.id; }));
 		});
 };
 
@@ -286,9 +286,21 @@ exports.get_by_spaces_ids = function(space_ids) {
 };
 
 var link = function(ids) {
-	return db.by_ids('invites', ids, {fields: ['data']})
+	return db.by_ids('spaces_invites', ids, {fields: ['from_user_id', 'data']})
 		.then(function(items) {
-			return items.map(function(i) { return i.data;});
+			var user_ids = items.map(function(i) { return i.from_user_id; });
+			return user_model.get_by_ids(user_ids)
+				.then(function(users) {
+					var user_idx = {};
+					users.forEach(function(user) { user_idx[user.id] = user; });
+					return items.map(function(i) {
+						var data = i.data;
+						var user = user_idx[i.from_user_id] || {};
+						data.from_user_id = user.id;
+						data.from_username = user.username;
+						return data;
+					});
+				});
 		});
 };
 
