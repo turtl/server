@@ -1,6 +1,7 @@
 "use strict";
 
 var db = require('../helpers/db');
+var Promise = require('bluebird');
 var error = require('../helpers/error');
 var config = require('../helpers/config');
 var sync_model = require('./sync');
@@ -250,12 +251,41 @@ exports.update = function(user_id, space_id, invite_id, data) {
 };
 
 exports.delete = function(user_id, space_id, invite_id) {
-	return space_model.permissions_check(user_id, space_id, space_model.permissions.delete_space_invite)
-		.then(function() {
+	var promises = [
+		space_model.user_has_permission(user_id, space_id, space_model.permissions.delete_space_invite),
+		user_model.get_by_id(user_id)
+			.then(function(user) {
+				if(!user) return false;
+				return invite_exists(space_id, user.username);
+			})
+			.then(function(invite) {
+				return invite && invite.id == invite_id;
+			})
+	];
+	var is_invitee;
+	return Promise.all(promises)
+		.spread(function(has_perm, _is_invitee) {
+			is_invitee = _is_invitee;
+			if(!has_perm && !is_invitee) {
+				throw error.forbidden('you do not have access to delete that invite');
+			}
 			return delete_invite(space_id, invite_id);
 		})
 		.tap(function() {
-			analytics.track('space.invite-delete', {space_id: space_id});
+			return space_model.get_space_user_ids(space_id)
+				.then(function(user_ids) {
+					return Promise.all([
+						sync_model.add_record(user_ids, user_id, 'space', space_id, 'edit'),
+						sync_model.add_record([user_id], user_id, 'invite', invite_id, 'delete'),
+					]);
+				});
+		})
+		.tap(function() {
+			var action = is_invitee ? 'space.invite-decline' : 'space.invite-delete';
+			analytics.track(user_id, 'space.invite-delete', {space_id: space_id});
+		})
+		.then(function() {
+			return true;
 		});
 };
 
@@ -263,6 +293,7 @@ exports.get_by_to_email = function(to_email) {
 	var qry = 'SELECT id FROM spaces_invites WHERE to_user = {{email}}';
 	return db.query(qry, {email: to_email})
 		.then(function(invites) {
+			if(invites.length == 0) return [];
 			return link(invites.map(function(i) { return i.id; }));
 		});
 };
