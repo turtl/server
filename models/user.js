@@ -209,7 +209,7 @@ exports.delete = function(cur_user_id, user_id) {
 			]);
 		})
 		.then(function() {
-			analytics.track('user.delete', {user_id: user_id, spaces: num_spaces});
+			analytics.track(user_id, 'user.delete', {user_id: user_id, spaces: num_spaces});
 			return true;
 		});
 };
