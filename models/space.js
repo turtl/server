@@ -213,6 +213,16 @@ var get_space_user_record = function(user_id, space_id) {
  */
 exports.get_data_tree = function(space_id, options) {
 	options || (options = {});
+
+	// -------------------------------------------------------------------------
+	// NOTE: we load our models inside this function because they both require
+	// some function defined below here, and i'm certainly not going to put the
+	// requires at the bottom of the file just to support this one function.
+	// -------------------------------------------------------------------------
+	var board_model = require('./board');
+	var note_model = require('./note');
+	// -------------------------------------------------------------------------
+
 	var space_promise = get_by_id(space_id, {raw: true})
 		.then(function(space) {
 			if(!space) return false;
@@ -229,15 +239,22 @@ exports.get_data_tree = function(space_id, options) {
 };
 
 exports.update_member = function(user_id, space_id, member_user_id, data) {
+	try {
+		var data = vlad.validate('space-member', data);
+	} catch(e) {
+		return Promise.reject(e);
+	}
 	return exports.permissions_check(user_id, space_id, permissions.edit_space_member)
 		.then(function() {
 			return get_space_user_record(member_user_id, space_id);
 		})
 		.then(function(member) {
+			if(!member) {
+				throw error.bad_request('that member wasn\'t found');
+			}
 			if(member.role == roles.owner) {
 				throw error.bad_request('you cannot edit the owner');
 			}
-			var data = vlad.validate('space-member', data);
 			return db.update('spaces_users', member.id, data);
 		})
 		.then(function() {
@@ -252,8 +269,11 @@ exports.update_member = function(user_id, space_id, member_user_id, data) {
 };
 
 exports.delete_member = function(user_id, space_id, member_user_id) {
-	return exports.permissions_check(user_id, space_id, permissions.delete_space_member)
-		.then(function() {
+	return exports.user_has_permission(user_id, space_id, permissions.delete_space_member)
+		.then(function(has_perm) {
+			if(!has_perm && user_id != member_user_id) {
+				throw error.forbidden('you do not have permission to remove that user');
+			}
 			return get_space_user_record(member_user_id, space_id);
 		})
 		.then(function(member) {
@@ -265,11 +285,14 @@ exports.delete_member = function(user_id, space_id, member_user_id) {
 		.then(function() {
 			return exports.get_space_user_ids(space_id)
 				.then(function(user_ids) {
-					return sync_model.add_record(user_ids, user_id, 'space', space_id, 'edit');
+					return Promise.all([
+						sync_model.add_record(user_ids, user_id, 'space', space_id, 'edit'),
+						sync_model.add_record([user_id], user_id, 'space', space_id, 'delete'),
+					]);
 				})
 		})
 		.then(function(sync_ids) {
-			return {sync_ids: sync_ids};
+			return {sync_ids: util.flatten(sync_ids)};
 		});
 };
 

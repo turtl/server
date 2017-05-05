@@ -1,6 +1,6 @@
 "use strict";
 
-var space_mode = require('../models/space');
+var space_model = require('../models/space');
 var invite_model = require('../models/invite');
 var tres = require('../helpers/tres');
 

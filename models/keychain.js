@@ -53,7 +53,7 @@ var edit = function(user_id, data) {
 				throw error.forbidden('you can\'t edit a keychain entry you don\'t own');
 			}
 			data.user_id = user_id;
-			return db.update('keychain', item_id, {data: data});
+			return db.update('keychain', data.id, {data: data});
 		})
 		.tap(function(item) {
 			return sync_model.add_record([user_id], user_id, 'keychain', item.id, 'edit')

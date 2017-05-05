@@ -81,6 +81,7 @@ exports.send = function(user_id, space_id, data) {
 	} catch(e) {
 		return Promise.reject(e);
 	}
+
 	if(space_id != data.space_id) return Promise.reject(error.bad_request('space_id passed does not match space_id in data'));
 
 	var to_user_email = data.to_user;
@@ -213,7 +214,7 @@ exports.accept = function(user_id, space_id, invite_id) {
 				from: invite.from_user_id,
 				to: invite.to_user,
 				role: invite.data.role,
-				has_password: data.has_password,
+				is_passphrase_protected: invite.data.is_passphrase_protected,
 			});
 			return {accepted: true};
 		});
