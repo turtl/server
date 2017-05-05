@@ -287,7 +287,7 @@ exports.delete_member = function(user_id, space_id, member_user_id) {
 				.then(function(user_ids) {
 					return Promise.all([
 						sync_model.add_record(user_ids, user_id, 'space', space_id, 'edit'),
-						sync_model.add_record([member_user_id], user_id, 'space', space_id, 'delete'),
+						sync_model.add_record([member_user_id], user_id, 'space', space_id, 'unshare'),
 					]);
 				})
 		})
