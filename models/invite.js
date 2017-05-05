@@ -204,6 +204,7 @@ exports.accept = function(user_id, space_id, invite_id) {
 				.then(function(space_users) {
 					return Promise.all([
 						sync_model.add_record([user_id], user_id, 'space', space_id, 'share'),
+						sync_model.add_record([user_id], user_id, 'invite', invite_id, 'delete'),
 						sync_model.add_record(space_users, user_id, 'space', space_id, 'edit'),
 					]);
 				});
