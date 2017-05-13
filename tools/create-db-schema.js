@@ -97,10 +97,11 @@ builder.table('keychain', {
 	fields: {
 		id: ty.pk,
 		user_id: builder.not_null(ty.id_int),
+		item_id: builder.not_null(ty.id),
 		data: ty.json,
 	},
 	indexes: [
-		{name: 'user_id', fields: ['user_id']},
+		{name: 'user_item', fields: ['user_id', 'item_id']},
 	],
 });
 

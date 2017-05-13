@@ -4,6 +4,7 @@ var db = require('../helpers/db');
 var Promise = require('bluebird');
 var sync_model = require('./sync');
 var user_model = require('./user');
+var keychain_model = require('./keychain');
 var vlad = require('../helpers/validator');
 var error = require('../helpers/error');
 var invite_model = require('./invite');
@@ -286,6 +287,7 @@ exports.delete_member = function(user_id, space_id, member_user_id) {
 			return exports.get_space_user_ids(space_id)
 				.then(function(user_ids) {
 					return Promise.all([
+						keychain_model.delete_by_user_item(member_user_id, space_id),
 						sync_model.add_record(user_ids, user_id, 'space', space_id, 'edit'),
 						sync_model.add_record([member_user_id], user_id, 'space', space_id, 'unshare'),
 					]);

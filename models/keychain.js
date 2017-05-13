@@ -1,5 +1,6 @@
 "use strict";
 
+var Promise = require('bluebird');
 var db = require('../helpers/db');
 var sync_model = require('./sync');
 var error = require('../helpers/error');
@@ -12,6 +13,22 @@ vlad.define('keychain', {
 	user_id: {type: vlad.type.int, required: true},
 	body: {type: vlad.type.string, required: true},
 });
+
+/**
+ * Delete a keychain entry given a user id/item id. Be careful with this: it
+ * doesn't check any ownership/permissions, so use selectively.
+ */
+exports.delete_by_user_item = function(user_id, item_id, options) {
+	options || (options = {});
+	if(!user_id || !item_id) return Promise.resolve([]);
+
+	var qry = 'SELECT * FROM keychain WHERE user_id = {{user_id}} AND item_id = {{item_id}} LIMIT 1';
+	return db.first(qry, {user_id: user_id, item_id: item_id})
+		.then(function(entry) {
+			if(!entry) return [];
+			return del(user_id, entry.id);
+		});
+};
 
 /**
  * get a keychain entry's data by id
@@ -34,7 +51,7 @@ exports.get_by_user = function(user_id) {
 var add = function(user_id, data) {
 	data.user_id = user_id;
 	var data = vlad.validate('keychain', data);
-	return db.insert('keychain', {id: data.id, user_id: user_id, data: data})
+	return db.insert('keychain', {id: data.id, user_id: user_id, item_id: data.item_id, data: data})
 		.tap(function(item) {
 			return sync_model.add_record([user_id], user_id, 'keychain', item.id, 'add')
 				.then(function(sync_ids) {
@@ -53,7 +70,7 @@ var edit = function(user_id, data) {
 				throw error.forbidden('you can\'t edit a keychain entry you don\'t own');
 			}
 			data.user_id = user_id;
-			return db.update('keychain', data.id, {data: data});
+			return db.update('keychain', data.id, {item_id: data.item_id, data: data});
 		})
 		.tap(function(item) {
 			return sync_model.add_record([user_id], user_id, 'keychain', item.id, 'edit')
