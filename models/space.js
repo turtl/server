@@ -298,6 +298,46 @@ exports.delete_member = function(user_id, space_id, member_user_id) {
 		});
 };
 
+exports.set_owner = function(user_id, space_id, new_user_id) {
+	return exports.permissions_check(user_id, space_id, permissions.set_space_owner)
+		.then(function() {
+			return Promise.all([
+				get_by_id(space_id),
+				get_space_user_record(user_id, space_id),
+				get_space_user_record(new_user_id, space_id),
+			]);
+		})
+		.spread(function(space, cur_owner_member, new_owner_member) {
+			console.log('harr: ', space_id, new_user_id, new_owner_member);
+			if(!space) throw error.not_found('that space was not found');
+			if(!cur_owner_member) throw error.not_found('that space owner was not found');
+			if(!new_owner_member) throw error.not_found('that space member was not found');
+			space.user_id = new_user_id;
+			return db.update('spaces', space_id, {data: db.json(space)})
+				.tap(function(_space) {
+					return Promise.all([
+						db.update('spaces_users', cur_owner_member.id, {role: roles.admin}),
+						db.update('spaces_users', new_owner_member.id, {role: roles.owner}),
+					]);
+				});
+		})
+		.tap(function(space) {
+			return exports.get_space_user_ids(space_id)
+				.then(function(user_ids) {
+					return sync_model.add_record(user_ids, user_id, 'space', space_id, 'edit');
+				})
+				.then(function(sync_ids) {
+					space.data.sync_ids = sync_ids;
+				});
+		})
+		.tap(function(space) {
+			return populate_members([space]);
+		})
+		.then(function(space) {
+			return space.data;
+		});
+};
+
 var add = function(user_id, data) {
 	data.user_id = user_id;
 	var data = vlad.validate('space', data);
@@ -374,19 +414,6 @@ var link = function(ids) {
 		})
 		.then(function(items) {
 			return items.map(function(i) { return i.data;});
-		});
-};
-
-var set_owner = function(user_id, data) {
-	var space_id = data.id;
-	var new_user_id = data.user_id;
-	return exports.permissions_check(user_id, space_id, permissions.set_space_owner)
-		.then(function() {
-			return get_by_id(space_id);
-		})
-		.then(function(space) {
-			space.user_id = new_user_id;
-			return db.update('spaces', space_id, {data: db.json(space)});
 		});
 };
 
@@ -557,6 +584,5 @@ sync_model.register('space', {
 	'edit': edit,
 	'delete': del,
 	'link': link,
-	'set-owner': set_owner,
 });
 

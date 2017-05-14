@@ -7,6 +7,7 @@ var tres = require('../helpers/tres');
 exports.route = function(app) {
 	app.put('/spaces/:space_id/members/:user_id', update_member);
 	app.delete('/spaces/:space_id/members/:user_id', delete_member);
+	app.put('/spaces/:space_id/owner/:new_user_id', set_owner);
 	app.post('/spaces/:space_id/invites', send_invite);
 	app.put('/spaces/:space_id/invites/:invite_id', update_invite);
 	app.post('/spaces/:space_id/invites/accepted/:invite_id', accept_invite);
@@ -26,6 +27,13 @@ var delete_member = function(req, res) {
 	var space_id = req.params.space_id;
 	var member_user_id = req.params.user_id;
 	tres.wrap(res, space_model.delete_member(user_id, space_id, member_user_id));
+};
+
+var set_owner = function(req, res) {
+	var user_id = req.user.id;
+	var space_id = req.params.space_id;
+	var new_user_id = req.params.new_user_id;
+	tres.wrap(res, space_model.set_owner(user_id, space_id, new_user_id));
 };
 
 var send_invite = function(req, res) {
