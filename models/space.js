@@ -308,7 +308,6 @@ exports.set_owner = function(user_id, space_id, new_user_id) {
 			]);
 		})
 		.spread(function(space, cur_owner_member, new_owner_member) {
-			console.log('harr: ', space_id, new_user_id, new_owner_member);
 			if(!space) throw error.not_found('that space was not found');
 			if(!cur_owner_member) throw error.not_found('that space owner was not found');
 			if(!new_owner_member) throw error.not_found('that space member was not found');
@@ -514,11 +513,13 @@ exports.simple_move_space = function(sync_type, sync_table, perms_delete, perms_
 	return function(user_id, data) {
 		var data = vlad.validate(sync_type, data);
 		var item_id = data.id;
+		var old_space_id = null;
+		var new_space_id = null;
 		return get_by_id(item_id)
 			.then(function(cur_item_data) {
 				if(!cur_item_data) throw error.not_found('that space was not found');
-				var old_space_id = cur_item_data.space_id;
-				var new_space_id = data.space_id;
+				old_space_id = cur_item_data.space_id;
+				new_space_id = data.space_id;
 				// the jackass catcher
 				if(old_space_id == new_space_id) {
 					error.promise_throw('same_space', cur_item_data);
@@ -528,8 +529,8 @@ exports.simple_move_space = function(sync_type, sync_table, perms_delete, perms_
 					old_space_id,
 					new_space_id,
 					// if either permission check fails, we get booted
-					space_model.permissions_check(user_id, old_space_id, perms_delete),
-					space_model.permissions_check(user_id, new_space_id, perms_add),
+					exports.permissions_check(user_id, old_space_id, perms_delete),
+					exports.permissions_check(user_id, new_space_id, perms_add),
 				]);
 			})
 			.spread(function(cur_item_data, old_space_id, new_space_id, _can_delete, _can_add) {
@@ -541,8 +542,8 @@ exports.simple_move_space = function(sync_type, sync_table, perms_delete, perms_
 				return db.update(sync_table, item_id, update)
 					.tap(function(item) {
 						var user_promises = [
-							space_model.get_space_user_ids(old_space_id),
-							space_model.get_space_user_ids(new_space_id),
+							exports.get_space_user_ids(old_space_id),
+							exports.get_space_user_ids(new_space_id),
 						];
 						return Promise.all(user_promises)
 							.spread(function(old_user_ids, new_user_ids) {
@@ -555,7 +556,7 @@ exports.simple_move_space = function(sync_type, sync_table, perms_delete, perms_
 								return sync_model.add_records_from_split(user_id, split_users, action_map, sync_type, item_id);
 							})
 							.then(function(syncs) {
-								return util.flatten(syncs);
+								item.sync_ids = util.flatten(syncs);
 							});
 					});
 			})
@@ -573,8 +574,7 @@ exports.simple_move_space = function(sync_type, sync_table, perms_delete, perms_
 			})
 			.catch(error.promise_catch('same_space'), function(err) {
 				var item = err.same_space;
-				item.sync_ids = [];
-				return item;
+				return {data: item, sync_ids: []};
 			});
 	};
 }

@@ -6,6 +6,7 @@ var space_model = require('./space');
 var note_model = require('./note');
 var vlad = require('../helpers/validator');
 var util = require('../helpers/util');
+var Promise = require('bluebird');
 
 vlad.define('board', {
 	id: {type: vlad.type.client_id, required: true},
