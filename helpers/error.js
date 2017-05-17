@@ -26,7 +26,7 @@ exports.promise_throw = function(reason, data) {
 };
 exports.promise_catch = function(reason) {
 	return function(obj) {
-		return obj[reason] === true;
+		return typeof(obj[reason] != 'undefined');
 	};
 };
 
