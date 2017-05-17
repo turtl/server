@@ -98,31 +98,6 @@ exports.get_file_url = function(user_id, note_id) {
 		});
 };
 
-exports.get_by_space_id_board_id = function(space_id, board_id) {
-	var qry = [
-		'SELECT *',
-		'FROM notes',
-		'WHERE space_id = {{space_id}} AND board_id = {{board_id}}'
-	].join('\n');
-	return db.query(qry, {space_id: space_id, board_id: board_id})
-};
-
-/**
- * Move a note between spaces. No permissions checks. No syncing.
- */
-exports.move_note_space = function(note_id, new_space_id) {
-	return db.by_id('notes', note_id)
-		.then(function(note_rec) {
-			var data = note_rec.data;
-			data.space_id = new_space_id;
-			var update = {
-				space_id: new_space_id,
-				data: data,
-			};
-			return db.update('notes', note_id, update);
-		});
-};
-
 var add = space_model.simple_add(
 	'note',
 	'notes',
