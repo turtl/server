@@ -97,6 +97,10 @@ var attach_file = function(req, res) {
 		// on the stream (active_writes > 0) so we need to check both before
 		// stampeding towards a success response.
 		done = true;
+		// in the case the entire upload finished before we even have a stream
+		// ready, just return. we'll finalize everything once the stream is
+		// created.
+		if(!stream) return;
 		// do an empty write. this gives our streamcb a little nudge in case we
 		// finish here AFTER the last write finishes (it's possible)
 		write(Buffer.concat([]));
