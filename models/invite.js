@@ -147,14 +147,6 @@ exports.send = function(user_id, space_id, data) {
 				.then(function() { return to_user; });
 		})
 		.then(function(to_user) {
-			analytics.track(user_id, 'space.invite-send', {
-				space_id: space_id,
-				from: user_id,
-				to: to_user_email,
-				role: data.role,
-				has_password: data.has_password,
-			});
-
 			return space_model.get_space_user_ids(space_id)
 				.then(function(space_user_ids) {
 					var to_promise = to_user ? 
@@ -178,7 +170,7 @@ exports.send = function(user_id, space_id, data) {
 		});
 };
 
-exports.accept = function(user_id, space_id, invite_id) {
+exports.accept = function(user_id, space_id, invite_id, post_accept_fn) {
 	return get_by_id(space_id, invite_id)
 		.tap(function(invite) {
 			if(!invite) throw error.not_found('that invite doesn\'t exist');
@@ -210,13 +202,7 @@ exports.accept = function(user_id, space_id, invite_id) {
 				});
 		})
 		.then(function(invite) {
-			analytics.track(user_id, 'space.invite-accept', {
-				space_id: space_id,
-				from: invite.from_user_id,
-				to: invite.to_user,
-				role: invite.data.role,
-				is_passphrase_protected: invite.data.is_passphrase_protected,
-			});
+			if(post_accept_fn) post_accept_fn(invite);
 			return {accepted: true};
 		});
 };
@@ -252,7 +238,7 @@ exports.update = function(user_id, space_id, invite_id, data) {
 		});
 };
 
-exports.delete = function(user_id, space_id, invite_id) {
+exports.delete = function(user_id, space_id, invite_id, post_delete_fn) {
 	var promises = [
 		space_model.user_has_permission(user_id, space_id, space_model.permissions.delete_space_invite),
 		user_model.get_by_id(user_id)
@@ -283,8 +269,7 @@ exports.delete = function(user_id, space_id, invite_id) {
 				});
 		})
 		.tap(function() {
-			var action = is_invitee ? 'space.invite-decline' : 'space.invite-delete';
-			analytics.track(user_id, 'space.invite-delete', {space_id: space_id});
+			if(post_delete_fn) post_delete_fn({is_invitee: is_invitee});
 		})
 		.then(function() {
 			return true;

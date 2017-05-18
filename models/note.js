@@ -65,9 +65,6 @@ exports.attach_file = function(user_id, note_id) {
 						return sync_model.add_record(user_ids, user_id, 'note', note_id, 'edit');
 					})
 					.then(function(sync_ids) {
-						// DON'T return, we don't failed analytics to grind the
-						// sync to a halt
-						analytics.track(user_id, 'file.upload', {size: file_size});
 						// return the full note data object (w/ sync ids)
 						return get_by_id(note_id)
 							.tap(function(notedata) {

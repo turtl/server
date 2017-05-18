@@ -18,8 +18,13 @@ exports.route = function(app) {
  * create a new user account
  */
 var join = function(req, res) {
+	var client = req.header('X-Turtl-Client');
 	var data = req.body;
-	tres.wrap(res, model.join(data));
+	var promise = model.join(data)
+		.tap(function(user) {
+			return analytics.track(user.id, 'user.join', client);
+		});
+	tres.wrap(res, promise);
 };
 
 var get_by_id = function(req, res) {
@@ -71,7 +76,12 @@ var resend_confirmation = function(req, res) {
 var delete_account = function(req, res) {
 	var cur_user_id = req.user.id;
 	var user_id = req.params.user_id;
-	tres.wrap(res, model.delete(cur_user_id, user_id));
+	var client = req.header('X-Turtl-Client');
+	var promise = model.delete(cur_user_id, user_id)
+		.tap(function() {
+			analytics.track(user_id, 'user.delete', client, {user_id: user_id});
+		});
+	tres.wrap(res, promise);
 };
 
 /**

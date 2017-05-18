@@ -340,7 +340,7 @@ var process_incoming_sync = function(user_id, sync) {
  * Given a user_id and a set of incoming sync records, apply the records to the
  * user's profile.
  */
-exports.bulk_sync = function(user_id, sync_records) {
+exports.bulk_sync = function(user_id, sync_records, client) {
 	// enforce our sync.max_bulk_sync_records config
 	var max_sync_records = (config.sync || {}).max_bulk_sync_records;
 	if(max_sync_records) {
@@ -369,7 +369,7 @@ exports.bulk_sync = function(user_id, sync_records) {
 				success_idx[sync._id] = true;
 				// DON'T return, we don't want failed analytics to grind the
 				// sync to a halt
-				analytics.track(user_id, sync.type+'.'+sync.action);
+				analytics.track(user_id, sync.type+'.'+sync.action, client);
 			})
 			.catch(function(err) {
 				log.error('sync.bulk_sync() -- ', err);

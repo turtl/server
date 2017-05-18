@@ -29,6 +29,7 @@ var get_note_file = function(req, res) {
 var attach_file = function(req, res) {
 	var user_id = req.user.id;
 	var note_id = req.params.note_id;
+	var client = req.header('X-Turtl-Client');
 
 	// the stream passed back from our file writer plugin
 	var stream = null;
@@ -64,6 +65,7 @@ var attach_file = function(req, res) {
 		return finishfn(total_size)
 			.then(function(notedata) {
 				sent = true;
+				analytics.track(user_id, 'file.upload', client, {size: file_size});
 				return tres.send(res, notedata);
 			})
 			.catch(errfn);

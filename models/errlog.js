@@ -3,7 +3,6 @@
 var Promise = require('bluebird');
 var crypto = require('crypto');
 var db = require('../helpers/db');
-var analytics = require('./analytics');
 
 var hash_log = function(logdata) {
 	var ensure_string = function(x) { return typeof(x) == 'string' ? x : x.toString(); };
@@ -31,8 +30,7 @@ exports.log_error = function(logdata) {
 	var hash = hash_log(logdata);
 	return db.upsert('errorlog', {id: hash, data: logdata}, 'id')
 		.then(function() {
-			analytics.track(null, 'error.log', {hash: hash});
-			return {};
+			return {hash: hash};
 		});
 };
 

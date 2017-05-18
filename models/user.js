@@ -132,9 +132,6 @@ exports.join = function(userdata) {
 				$name: (user.data || {}).name,
 			});
 		})
-		.tap(function(user) {
-			return analytics.track(user.id, 'user.join');
-		})
 		.then(clean_user);
 };
 
@@ -193,10 +190,8 @@ exports.resend_confirmation = function(user_id) {
 exports.delete = function(cur_user_id, user_id) {
 	if(cur_user_id != user_id) return Promise.reject(error.forbidden('you cannot delete an account you don\'t own'));
 
-	var num_spaces = 0;
 	return space_model.get_by_user_id(user_id, {role: space_model.roles.owner})
 		.then(function(owned_spaces) {
-			num_spaces = owned_spaces.length;
 			return Promise.all(owned_spaces.map(function(space) {
 				return space_model.delete_space(user_id, space.id);
 			}));
@@ -209,7 +204,6 @@ exports.delete = function(cur_user_id, user_id) {
 			]);
 		})
 		.then(function() {
-			analytics.track(user_id, 'user.delete', {user_id: user_id, spaces: num_spaces});
 			return true;
 		});
 };

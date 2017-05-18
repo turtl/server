@@ -65,8 +65,9 @@ var full_sync = function(req, res) {
  */
 var bulk_sync = function(req, res) {
 	var user_id = req.user.id;
+	var client = req.header('X-Turtl-Client');
 	var sync_records = req.body;
-	return tres.wrap(res, model.bulk_sync(user_id, sync_records));
+	return tres.wrap(res, model.bulk_sync(user_id, sync_records, client));
 };
 
 

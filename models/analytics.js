@@ -8,10 +8,11 @@ var mixpanel = Mixpanel.init(config.analytics.mixpanel.token, {protocol: 'https'
 /**
  * Track an analytics event
  */
-exports.track = function(user_id, action, data) {
+exports.track = function(user_id, action, client, data) {
 	if(!config.analytics.enabled) return;
 	data || (data = {});
 	if(user_id && !data.distinct_id) data.distinct_id = user_id;
+	data.client = client;
 
 	log.debug('analytics.track() -- ', user_id, action, data);
 
