@@ -173,6 +173,21 @@ exports.get_space_user_ids = function(space_id) {
 };
 
 /**
+ * Given a user id, grab all users attached to the spaces that user is in.
+ */
+exports.get_members_from_users_spaces = function(user_id) {
+	var qry = [
+		'SELECT',
+		'	su.user_id, su.space_id',
+		'FROM',
+		'	spaces_users su',
+		'WHERE',
+		'	su.space_id IN (SELECT su2.space_id FROM spaces_users su2 WHERE su2.user_id = {{user_id}})',
+	];
+	return db.query(qry.join('\n'), {user_id: user_id});
+};
+
+/**
  * get all spaces attached to a user
  */
 exports.get_by_user_id = function(user_id, options) {

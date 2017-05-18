@@ -325,13 +325,25 @@ exports.update = function(cur_user_id, user_id, data) {
 		.then(function() {
 			return client.query('COMMIT');
 		})
-		// make sync records for our sensitive shit
 		.then(function() {
+			return space_model.get_members_from_users_spaces(user_id);
+		})
+		// make sync records for our sensitive shit
+		.then(function(users_spaces_members) {
 			var promises = [
-				sync_model.add_record([user_id], user_id, 'user', user_id, 'change-password')
+				sync_model.add_record([user_id], user_id, 'user', user_id, 'change-password'),
 			];
 			data.keychain.forEach(function(key) {
 				promises.push(sync_model.add_record([user_id], user_id, 'keychain', key.id, 'edit'));
+			});
+			var space_idx = {};
+			users_spaces_members.forEach(function(member_rec) {
+				var space_id = member_rec.space_id;
+				if(!space_idx[space_id]) space_idx[space_id] = [];
+				space_idx[space_id].push(member_rec.user_id);
+			});
+			Object.keys(space_idx).forEach(function(space_id) {
+				promises.push(sync_model.add_record(space_idx[space_id], user_id, 'space', space_id, 'edit'));
 			});
 			return Promise.all(promises)
 				.then(function(ids_arr) {
