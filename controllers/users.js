@@ -2,6 +2,7 @@ var model = require('../models/user');
 var tres = require('../helpers/tres');
 var config = require('../helpers/config');
 var log = require('../helpers/log');
+var analytics = require('../models/analytics');
 
 exports.route = function(app) {
 	app.post('/users', join);
