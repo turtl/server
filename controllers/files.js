@@ -1,6 +1,7 @@
 var tres = require('../helpers/tres');
 var error = require('../helpers/error');
 var note_model = require('../models/note');
+var analytics = require('../models/analytics');
 
 exports.route = function(app) {
 	app.get('/notes/:note_id/attachment', get_note_file);
@@ -42,6 +43,8 @@ var attach_file = function(req, res) {
 	var finishfn = false;
 	// handles errors for us
 	var errfn = function(err) {
+		if(sent) return;
+		if(!(err instanceof Error)) err = new Error(err);
 		sent = true;
 		return tres.err(res, err);
 	};
@@ -60,15 +63,20 @@ var attach_file = function(req, res) {
 		if(!done) return;
 		// we're writing to the stream, don't finish or end
 		if(active_writes > 0) return;
-		// we're done! call our finishfn
+		// when our stream is done, we call our finish fn. if there are errors,
+		// this will never be reached and we'll end up in the errfn.
+		stream.on('close', function() {
+			if(sent) return;
+			return finishfn(total_size)
+				.then(function(notedata) {
+					sent = true;
+					analytics.track(user_id, 'file.upload', client, {size: total_size});
+					return tres.send(res, notedata);
+				})
+				.catch(errfn);
+		});
+		// we're done! mark the stream finished.
 		stream.end();
-		return finishfn(total_size)
-			.then(function(notedata) {
-				sent = true;
-				analytics.track(user_id, 'file.upload', client, {size: file_size});
-				return tres.send(res, notedata);
-			})
-			.catch(errfn);
 	};
 	// writes to the stream, and increments our active_writes count, calling the
 	// streamcb once complete (which in turn decrements active_writes and checks
