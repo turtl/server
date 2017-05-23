@@ -65,7 +65,7 @@ var attach_file = function(req, res) {
 		if(active_writes > 0) return;
 		// when our stream is done, we call our finish fn. if there are errors,
 		// this will never be reached and we'll end up in the errfn.
-		stream.on('close', function() {
+		stream.on('finish', function() {
 			if(sent) return;
 			return finishfn(total_size)
 				.then(function(notedata) {
