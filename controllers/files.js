@@ -11,12 +11,7 @@ exports.route = function(app) {
 var get_note_file = function(req, res) {
 	var user_id = req.user.id;
 	var note_id = req.params.note_id;
-
-	return note_model.get_file_url(user_id, note_id)
-		.then(function(file_url) {
-			tres.redirect(res, file_url, {redirect: true});
-		})
-		.catch(tres.err.bind(tres, res));
+	tres.wrap(res, note_model.get_file_url(user_id, note_id));
 };
 
 /**
@@ -65,7 +60,7 @@ var attach_file = function(req, res) {
 		if(active_writes > 0) return;
 		// when our stream is done, we call our finish fn. if there are errors,
 		// this will never be reached and we'll end up in the errfn.
-		stream.on('finish', function() {
+		stream.on('uploaded', function() {
 			if(sent) return;
 			return finishfn(total_size)
 				.then(function(notedata) {

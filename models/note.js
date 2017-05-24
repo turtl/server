@@ -60,16 +60,25 @@ exports.attach_file = function(user_id, note_id) {
 		})
 		.then(function(stream) {
 			var finishfn = function(file_size) {
-				return space_model.get_space_user_ids(space_id)
+				var note = null;
+				return db.by_id('notes', note_id)
+					.then(function(_note) {
+						note = _note;
+						note.data.has_file = true;
+						return db.update('notes', note_id, {data: note.data});
+					})
+					.then(function() {
+						return space_model.get_space_user_ids(space_id);
+					})
 					.then(function(user_ids) {
-						return sync_model.add_record(user_ids, user_id, 'note', note_id, 'edit');
+						return Promise.all([
+							sync_model.add_record(user_ids, user_id, 'note', note_id, 'edit'),
+							sync_model.add_record(user_ids, user_id, 'file', note_id, 'add'),
+						]);
 					})
 					.then(function(sync_ids) {
-						// return the full note data object (w/ sync ids)
-						return get_by_id(note_id)
-							.tap(function(notedata) {
-								notedata.sync_ids = sync_ids;
-							});
+						note.data.sync_ids = sync_ids;
+						return note.data;
 					});
 			};
 			return [

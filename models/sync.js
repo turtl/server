@@ -457,6 +457,10 @@ exports.full_sync = function(user_id) {
 			notes.forEach(function(note) {
 				sync_records.push(convert_to_sync(note, 'note', 'add'));
 			});
+			notes.forEach(function(note) {
+				if(!note.has_file) return;
+				sync_records.push(convert_to_sync(note, 'file', 'add'));
+			});
 			return invite_model.get_by_to_email(user.username);
 		})
 		.then(function(invites) {
