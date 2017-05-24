@@ -1,1 +1,2 @@
+- move file delete sync creation from client to server (via simple_delete callback)
 
