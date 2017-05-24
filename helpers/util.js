@@ -1,5 +1,7 @@
 "use strict";
 
+var Promise = require('bluebird');
+
 /**
  * Run a deep clone of any JSON-serializable object herrp
  */
@@ -37,5 +39,14 @@ exports.flatten = function(arr, options, cur_level) {
 		}
 	});
 	return flattened;
+};
+
+/**
+ * A promise-based delay
+ */
+exports.delay = function(ms) {
+	return new Promise(function(resolve) {
+		setTimeout(resolve, ms);
+	});
 };
 

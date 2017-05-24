@@ -28,7 +28,8 @@ exports.route = function(app) {
 var partial_sync = function(req, res) {
 	var user_id = req.user.id;
 	var sync_id = req.query.sync_id;
-	return model.sync_from(user_id, sync_id)
+	var immediate = req.query.immediate == '1';
+	return model.sync_from(user_id, sync_id, !immediate)
 		.spread(function(sync_records, latest_sync_id) {
 			tres.send(res, {records: sync_records, sync_id: latest_sync_id});
 		})

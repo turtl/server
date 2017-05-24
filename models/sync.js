@@ -206,6 +206,9 @@ var link_sync_records = function(sync_records) {
 					ungrouped.push(sync);
 				});
 			});
+			ungrouped.forEach(function(sync) {
+				if(sync.id > latest_sync_id) latest_sync_id = sync.id;
+			});
 			return [
 				ungrouped.sort(function(a, b) { return a.id - b.id; }),
 				latest_sync_id > 0 ? latest_sync_id : null,
@@ -259,11 +262,7 @@ var populate_shares = function(user_id, sync_records) {
 	}).then(function() { return populated; });
 };
 
-/**
- * Grab all the sync records for a user id AFTER the given sync id.
- */
-exports.sync_from = function(user_id, from_sync_id) {
-	if(!from_sync_id) return Promise.reject(error.bad_request('missing `sync_id` var'));
+var poll_sync_items = function(user_id, from_sync_id, poll, cutoff) {
 	var qry = [
 		'SELECT',
 		'	s.*',
@@ -277,6 +276,26 @@ exports.sync_from = function(user_id, from_sync_id) {
 		'	s.id ASC',
 	].join('\n');
 	return db.query(qry, {user_id: user_id, sync_id: from_sync_id})
+		.then(function(sync_records) {
+			var now = new Date().getTime();
+			if(sync_records.length > 0 || !poll || (poll && now > cutoff)) {
+				return sync_records;
+			}
+			return util.delay(5000)
+				.then(function() {
+					return poll_sync_items(user_id, from_sync_id, poll, cutoff);
+				});
+		});
+};
+
+/**
+ * Grab all the sync records for a user id AFTER the given sync id.
+ */
+exports.sync_from = function(user_id, from_sync_id, poll) {
+	if(!from_sync_id) return Promise.reject(error.bad_request('missing `sync_id` var'));
+	// 120s poll time
+	var cutoff = (new Date().getTime()) + (1000 * 90);
+	return poll_sync_items(user_id, from_sync_id, poll, cutoff)
 		.then(function(sync_records) {
 			return link_sync_records(sync_records);
 		})
