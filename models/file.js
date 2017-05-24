@@ -100,6 +100,16 @@ exports.file_url = function(note_id) {
 	}
 };
 
+exports.stream_local = function(note_id) {
+	return new Promise(function(resolve, reject) {
+		var path = config.uploads.local+'/'+note_id;
+		fs.exists(path, function(exists) {
+			if(!exists) return reject(new Error('local file for note '+note_id+' not found'));
+			resolve(fs.createReadStream(path));
+		});
+	});
+};
+
 /**
  * remove an attachment from a note. this assumes all permissions checks are
  * complete, and is really just responsible for the dirty work.

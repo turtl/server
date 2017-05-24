@@ -33,7 +33,15 @@ sync:
   max_bulk_sync_records: 32
 
 uploads:
-  local: 'd:/htdocs/turtl/server/public/uploads'
+  # if set to a path, files will be uploaded to the local filesystem instead of
+  # S3. otherwise, set to false
+  local: '/var/www/turtl/server/public/uploads'
+  # if true, downloading local files will be proxied through the turtl server.
+  # this avoids needing to set up any CORS config in your favorite webserver,
+  # but may slightly affect performance on high-demand servers.
+  local_proxy: true
+  # if local_proxy is false, this is should be the url path the uploaded files
+  # are publicly available on
   url: 'http://api.turtl.dev/uploads'
 
 s3:

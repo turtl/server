@@ -2,16 +2,32 @@ var tres = require('../helpers/tres');
 var error = require('../helpers/error');
 var note_model = require('../models/note');
 var analytics = require('../models/analytics');
+var config = require('../helpers/config');
+var Promise = require('bluebird');
 
 exports.route = function(app) {
 	app.get('/notes/:note_id/attachment', get_note_file);
+	app.get('/notes/:note_id/local-attachment-proxy', proxy_local_file);
 	app.put('/notes/:note_id/attachment', attach_file);
 };
 
 var get_note_file = function(req, res) {
 	var user_id = req.user.id;
 	var note_id = req.params.note_id;
-	tres.wrap(res, note_model.get_file_url(user_id, note_id));
+	var promise = config.uploads.local && config.uploads.local_proxy ?
+		Promise.resolve(config.app.api_url+'/notes/'+note_id+'/local-attachment-proxy') :
+		note_model.get_file_url(user_id, note_id);
+	tres.wrap(res, promise);
+};
+
+var proxy_local_file = function(req, res) {
+	var user_id = req.user.id;
+	var note_id = req.params.note_id;
+	return note_model.pipe_local_file(user_id, note_id)
+		.then(function(stream) {
+			stream.on('error', function() { stream.end(); });
+			stream.pipe(res);
+		});
 };
 
 /**

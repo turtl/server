@@ -4,6 +4,7 @@ var db = require('../helpers/db');
 var sync_model = require('./sync');
 var vlad = require('../helpers/validator');
 var error = require('../helpers/error');
+var config = require('../helpers/config');
 var space_model = require('./space');
 var file_model = require('./file');
 var analytics = require('./analytics');
@@ -101,6 +102,22 @@ exports.get_file_url = function(user_id, note_id) {
 		})
 		.then(function() {
 			return file_model.file_url(note_id);
+		});
+};
+
+/**
+ * grab a local file upload and return the stream
+ */
+exports.pipe_local_file = function(user_id, note_id) {
+	var space_id;
+	return db.by_id('notes', note_id)
+		.then(function(note) {
+			if(!note) throw error.not_found('that note doesn\'t exist');
+			space_id = note.space_id;
+			return space_model.permissions_check(user_id, space_id, space_model.permissions.edit_note);
+		})
+		.then(function() {
+			return file_model.stream_local(note_id);
 		});
 };
 
