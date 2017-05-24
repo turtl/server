@@ -69,7 +69,7 @@ var send_invite = function(req, res) {
 	var client = req.header('X-Turtl-Client');
 	var promise = invite_model.send(from_user_id, space_id, data)
 		.tap(function() {
-			analytics.track(user_id, 'space.invite-send', client, {
+			analytics.track(from_user_id, 'space.invite-send', client, {
 				space_id: space_id,
 				from: from_user_id,
 				to: data.to_user,
