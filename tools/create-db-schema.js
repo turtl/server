@@ -168,7 +168,7 @@ builder.table('sync_users', {
 		user_id: builder.not_null(ty.id),
 	},
 	indexes: [
-		{name: 'user_id', fields: ['user_id']},
+		{name: 'sync_scan', fields: ['sync_id', 'user_id']},
 	],
 });
 
