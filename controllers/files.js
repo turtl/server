@@ -60,6 +60,8 @@ var attach_file = function(req, res) {
 		if(active_writes > 0) return;
 		// when our stream is done, we call our finish fn. if there are errors,
 		// this will never be reached and we'll end up in the errfn.
+		// NOTE: `uploaded` is an s3-specific event, so we mimick it in the
+		// local file uploader
 		stream.on('uploaded', function() {
 			if(sent) return;
 			return finishfn(total_size)

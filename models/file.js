@@ -11,7 +11,12 @@ var s3_stream = require('s3-upload-stream')(new AWS.S3());
  * returns the uploading interface for a local file
  */
 var upload_local = function(file_id) {
-	return fs.createWriteStream(config.uploads.local+'/'+file_id);
+	var stream = fs.createWriteStream(config.uploads.local+'/'+file_id);
+	// mimick the s3 uploader's event
+	stream.on('finish', function() {
+		stream.emit('uploaded');
+	});
+	return stream;
 };
 
 /**
