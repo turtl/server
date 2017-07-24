@@ -473,7 +473,7 @@ exports.full_sync = function(user_id) {
 		.then(function(sync_id) {
 			return {
 				sync_id: sync_id,
-				records: sync_records,
+				records: sync_records.map(function(s) {s.id = 0; return s;}),
 			};
 		});
 };

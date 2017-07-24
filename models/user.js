@@ -123,7 +123,9 @@ exports.join = function(userdata) {
 			});
 		})
 		.tap(function(user) {
-			return send_confirmation_email(user);
+			// DON'T return. if the confirmation email fails, the user can send
+			// again through the settings interface
+			send_confirmation_email(user);
 		})
 		.tap(function(user) {
 			return analytics.join(user.id, {
