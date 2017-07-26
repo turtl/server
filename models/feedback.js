@@ -3,8 +3,9 @@
 var email_model = require('./email');
 var error = require('../helpers/error');
 var config = require('../helpers/config');
+var Promise = require('bluebird');
 
-exports.send = function(user_id, username, data) {
+exports.send = function(user_id, username, client, data) {
 	var body = data.body || false;
 	if(!body) return Promise.reject(error.bad_request('no feedback given'));
 	var subject = 'New Turtl feedback from '+username+' ('+user_id+')';
