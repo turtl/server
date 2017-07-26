@@ -293,7 +293,6 @@ var poll_sync_items = function(user_id, from_sync_id, poll, cutoff) {
  */
 exports.sync_from = function(user_id, from_sync_id, poll) {
 	if(!from_sync_id) return Promise.reject(error.bad_request('missing `sync_id` var'));
-	// 120s poll time
 	var cutoff = (new Date().getTime()) + (1000 * 90);
 	return poll_sync_items(user_id, from_sync_id, poll, cutoff)
 		.then(function(sync_records) {
@@ -350,6 +349,7 @@ var process_incoming_sync = function(user_id, sync) {
 			// db record, and we really only want to return the object's `data`,
 			// here we grab the data and set in our sync_ids
 			var data = item_data.data;
+			if(!data.id && item_data.id) data.id = item_data.id;
 			data.sync_ids = item_data.sync_ids;
 			return item_data.data;
 		});
@@ -380,6 +380,8 @@ exports.bulk_sync = function(user_id, sync_records, client) {
 				delete item.sync_ids;
 				successes.push({
 					id: sync_client_id,
+					user_id: user_id,
+					item_id: item.id,
 					type: sync.type,
 					action: sync.action,
 					sync_ids: sync_ids,
