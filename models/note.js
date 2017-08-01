@@ -136,12 +136,35 @@ var edit = space_model.simple_edit(
 	function(data) { return {id: data.id, space_id: data.space_id, board_id: data.board_id, data: db.json(data)}; }
 );
 
-var del = space_model.simple_delete(
+var delete_note = space_model.simple_delete(
 	'note',
 	'notes',
 	space_model.permissions.delete_note,
 	get_by_id
 );
+
+// wrap `delete_note`/simple_delete to also remove the note's file AND create a
+// corresponding file.delete sync record
+var del = function(user_id, note_id) {
+	var sync_ids = [];
+	var note = null;
+	return get_by_id(note_id)
+		.then(function(_note) {
+			note = _note;
+			return delete_note(user_id, note_id);
+		})
+		.then(function(_sync_ids) {
+			sync_ids = _sync_ids;
+			if(!note) throw error.promise_throw('doesnt_exist');
+			return delete_note_file_sync(user_id, note.space_id, note_id);
+		})
+		.then(function(delete_sync_ids) {
+			return sync_ids.concat(delete_sync_ids || []);
+		})
+		.catch(error.promise_catch('doesnt_exist'), function() {
+			return sync_ids;
+		});
+};
 
 var move_space = space_model.simple_move_space(
 	'note',
@@ -158,6 +181,26 @@ var link = function(ids) {
 		});
 };
 
+/**
+ * delete a note's file, no permission checks or note editing. this is mainly
+ * called when a note is being deleted and we want to a) delete the note's file
+ * along with the note and b) create a file.delete sync record so the client
+ * doesn't have to manage creating sync records for child objects.
+ */
+var delete_note_file_sync = function(user_id, space_id, note_id) {
+	return file_model.delete_attachment(note_id)
+		.then(function() {
+			return space_model.get_space_user_ids(space_id);
+		})
+		.then(function(user_ids) {
+			return sync_model.add_record(user_ids, user_id, 'file', note_id, 'delete');
+		});
+};
+
+/**
+ * delete a note's file, meant to be called from the sync system. this does NOT
+ * create a file.delete sync record because that sync record already exists =]
+ */
 var delete_note_file = function(user_id, note_id) {
 	return db.by_id('notes', note_id)
 		.tap(function(note) {
