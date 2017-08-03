@@ -397,6 +397,14 @@ var edit = function(user_id, data) {
 };
 
 var del = function(user_id, space_id) {
+	// -------------------------------------------------------------------------
+	// NOTE: we load our models inside this function because they both require
+	// some function defined below here, and i'm certainly not going to put the
+	// requires at the bottom of the file just to support this one function.
+	// -------------------------------------------------------------------------
+	var board_model = require('./board');
+	var note_model = require('./note');
+	// -------------------------------------------------------------------------
 	var affected_users = null;
 	return exports.permissions_check(user_id, space_id, permissions.delete_space)
 		.tap(function() {
@@ -404,18 +412,32 @@ var del = function(user_id, space_id) {
 				.then(function(user_ids) { affected_users = user_ids; });
 		})
 		.then(function(_) {
-			return db.delete('spaces', space_id);
+			var params = {space_id: space_id};
+			return Promise.all([
+				db.query('SELECT id FROM notes WHERE space_id = {{space_id}}', params),
+				db.query('SELECT id FROM boards WHERE space_id = {{space_id}}', params),
+			]);
 		})
-		.then(function(_) {
+		.spread(function(note_ids, board_ids) {
+			var note_delete = Promise.map(note_ids, function(note) {
+				return note_model.delete_note(user_id, note.id);
+			}, {concurrency: 8});
+			var board_delete = Promise.map(board_ids, function(board) {
+				return board_model.delete_board(user_id, board.id);
+			}, {concurrency: 8});
+			return Promise.all([note_delete, board_delete]);
+		})
+		.then(function() {
 			var params = {space_id: space_id};
 			return Promise.all([
 				db.query('DELETE FROM spaces_users WHERE space_id = {{space_id}}', params),
 				db.query('DELETE FROM spaces_invites WHERE space_id = {{space_id}}', params),
-				db.query('DELETE FROM notes WHERE space_id = {{space_id}}', params),
-				db.query('DELETE FROM boards WHERE space_id = {{space_id}}', params),
 			]);
 		})
 		.then(function(_) {
+			return db.delete('spaces', space_id);
+		})
+		.then(function(note_ids, board_ids) {
 			return sync_model.add_record(affected_users, user_id, 'space', space_id, 'delete')
 		});
 };

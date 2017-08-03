@@ -57,6 +57,7 @@ var del = space_model.simple_delete(
 	space_model.permissions.delete_board,
 	get_by_id
 );
+exports.delete_board = del;
 
 var move_space = space_model.simple_move_space(
 	'board',

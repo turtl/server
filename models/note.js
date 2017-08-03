@@ -22,7 +22,6 @@ vlad.define('note', {
 });
 
 vlad.define('note-file', {
-	id: {type: vlad.type.string, required: true},
 	size: {type: vlad.type.int},
 	body: {type: vlad.type.string},
 });
@@ -66,6 +65,9 @@ exports.attach_file = function(user_id, note_id) {
 					.then(function(_note) {
 						note = _note;
 						note.data.has_file = true;
+						var file = note.data.file || {};
+						file.size = file_size;
+						note.data.file = file;
 						return db.update('notes', note_id, {data: note.data});
 					})
 					.then(function() {
@@ -165,6 +167,7 @@ var del = function(user_id, note_id) {
 			return sync_ids;
 		});
 };
+exports.delete_note = del;
 
 var move_space = space_model.simple_move_space(
 	'note',
