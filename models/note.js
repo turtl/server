@@ -8,6 +8,7 @@ var config = require('../helpers/config');
 var space_model = require('./space');
 var file_model = require('./file');
 var analytics = require('./analytics');
+var util = require('../helpers/util');
 
 vlad.define('note', {
 	id: {type: vlad.type.client_id, required: true},
@@ -80,7 +81,7 @@ exports.attach_file = function(user_id, note_id) {
 						]);
 					})
 					.then(function(sync_ids) {
-						note.data.sync_ids = sync_ids;
+						note.data.sync_ids = util.flatten(sync_ids);
 						return note.data;
 					});
 			};
