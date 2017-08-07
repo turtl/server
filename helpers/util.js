@@ -44,9 +44,11 @@ exports.flatten = function(arr, options, cur_level) {
 /**
  * A promise-based delay
  */
-exports.delay = function(ms) {
+exports.delay = function(ms, val) {
 	return new Promise(function(resolve) {
-		setTimeout(resolve, ms);
+		setTimeout(function() {
+			resolve(val);
+		}, ms);
 	});
 };
 
