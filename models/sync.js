@@ -279,9 +279,20 @@ var poll_sync_items = function(user_id, from_sync_id, poll, cutoff) {
 		.then(function(sync_records) {
 			var now = new Date().getTime();
 			if(sync_records.length > 0 || !poll || (poll && now > cutoff)) {
-				return sync_records;
+				// if we're polling (normal use), then when a sync comes in,
+				// there's a great chance we're going to return the first part
+				// of the sync before the entire thing finishes, which means the
+				// client won't have access to all the sync_ids that were
+				// created BEFORE the incoming sync triggers. race condition,
+				// really. so what we do is delay arbitrarily to give whatever
+				// triggered the incoming sync time to finish.
+				if(poll) {
+					return new Promise(function(resolve, _) { setTimeout(resolve, 500); });
+				} else {
+					return sync_records;
+				}
 			}
-			return util.delay(5000)
+			return util.delay(2500)
 				.then(function() {
 					return poll_sync_items(user_id, from_sync_id, poll, cutoff);
 				});
@@ -407,7 +418,13 @@ exports.bulk_sync = function(user_id, sync_records, client) {
 			success: successes,
 			// return all failed syncs
 			failures: sync_records.filter(function(sync) {
-				return !success_idx[sync._id];
+				return !success_idx[sync._id] && sync.error;
+			}),
+			// return all syncs that cannot continue because they are blocked by
+			// a failure (remember, syncs process one after the other...if one
+			// fails, the rest of the chain cannot continue)
+			blocked: sync_records.filter(function(sync) {
+				return !success_idx[sync._id] && !sync.error;
 			}),
 		};
 	});
