@@ -287,7 +287,7 @@ var poll_sync_items = function(user_id, from_sync_id, poll, cutoff) {
 				// really. so what we do is delay arbitrarily to give whatever
 				// triggered the incoming sync time to finish.
 				if(poll) {
-					return new Promise(function(resolve, _) { setTimeout(resolve, 500); });
+					return util.delay(500, sync_records);
 				} else {
 					return sync_records;
 				}
