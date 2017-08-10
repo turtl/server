@@ -151,6 +151,9 @@ exports.by_ids = function(table, ids, options) {
 	var fields = options.fields;
 	var id_field = options.id_field || 'id';
 
+	// make sure a blank id list returns a blank result set =]
+	if(!ids || ids.length == 0) return Promise.resolve([]);
+
 	var id_data = {};
 	var qry_ids = [];
 	ids.forEach(function(id, i) {
