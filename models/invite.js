@@ -299,8 +299,9 @@ exports.get_by_space_id = function(space_id) {
  * grab all invites for a given set of space ids
  */
 exports.get_by_spaces_ids = function(space_ids) {
-	return db.by_ids('spaces_invites', space_ids, {id_field: 'space_id'})
-		.map(clean);
+	return db.by_ids('spaces_invites', space_ids, {fields: ['id'], id_field: 'space_id'})
+		.map(function(invite) { return invite.id; })
+		.then(link);
 };
 
 var link = function(ids) {

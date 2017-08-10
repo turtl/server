@@ -140,7 +140,7 @@ var populate_members = function(spaces, options) {
 				if(!space) return;
 				if(!space.data) space.data = {};
 				if(!space.data.invites) space.data.invites = [];
-				space.data.invites.push(invite.data);
+				space.data.invites.push(invite);
 			});
 			return spaces;
 		});
