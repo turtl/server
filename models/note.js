@@ -188,7 +188,7 @@ var link = function(ids) {
 /**
  * delete a note's file, no permission checks or note editing. this is mainly
  * called when a note is being deleted and we want to a) delete the note's file
- * along with the note and b) create a file.delete sync record so the client
+ * along with the note and b) create a `file.delete` sync record so the client
  * doesn't have to manage creating sync records for child objects.
  */
 var delete_note_file_sync = function(user_id, space_id, note_id) {
