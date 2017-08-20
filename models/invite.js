@@ -11,6 +11,7 @@ var vlad = require('../helpers/validator');
 var crypto = require('crypto');
 var email_model = require('./email');
 var analytics = require('./analytics');
+var util = require('../helpers/util');
 
 vlad.define('invite', {
 	id: {type: vlad.type.client_id, required: true},
@@ -171,8 +172,10 @@ exports.send = function(user_id, space_id, data) {
 };
 
 exports.accept = function(user_id, space_id, invite_id, post_accept_fn) {
+	var invite;
 	return get_by_id(space_id, invite_id)
-		.tap(function(invite) {
+		.tap(function(_invite) {
+			invite = _invite;
 			if(!invite) throw error.not_found('that invite doesn\'t exist');
 			return user_model.get_by_id(user_id)
 				.then(function(user) {
@@ -191,7 +194,10 @@ exports.accept = function(user_id, space_id, invite_id, post_accept_fn) {
 		.tap(function(invite) {
 			return delete_invite(space_id, invite_id);
 		})
-		.tap(function(invite) {
+		.then(function(invite) {
+			return space_model.get_by_id(space_id)
+		})
+		.then(function(space) {
 			return space_model.get_space_user_ids(space_id)
 				.then(function(space_users) {
 					return Promise.all([
@@ -199,9 +205,14 @@ exports.accept = function(user_id, space_id, invite_id, post_accept_fn) {
 						sync_model.add_record([user_id], user_id, 'invite', invite_id, 'delete'),
 						sync_model.add_record(space_users, user_id, 'space', space_id, 'edit'),
 					]);
+				})
+				.then(function(sync_ids_arr) {
+					var sync_ids = util.flatten(sync_ids_arr);
+					space.sync_ids = sync_ids;
+					return space;
 				});
 		})
-		.then(function(invite) {
+		.tap(function(invite) {
 			if(post_accept_fn) post_accept_fn(invite);
 			return {accepted: true};
 		});
