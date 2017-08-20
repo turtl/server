@@ -273,15 +273,15 @@ exports.update_member = function(user_id, space_id, member_user_id, data) {
 			}
 			return db.update('spaces_users', member.id, data);
 		})
-		.then(function() {
+		.tap(function() {
 			return exports.get_space_user_ids(space_id)
 				.then(function(user_ids) {
 					return sync_model.add_record(user_ids, user_id, 'space', space_id, 'edit');
 				})
+				.then(function(sync_ids) {
+					data.sync_ids = sync_ids;
+				});
 		})
-		.then(function(sync_ids) {
-			return {sync_ids: sync_ids};
-		});
 };
 
 exports.delete_member = function(user_id, space_id, member_user_id) {
