@@ -59,6 +59,9 @@ var del = space_model.simple_delete(
 );
 exports.delete_board = del;
 
+// NOTE: we don't move the notes in the post_move function because we need to
+// re-encrypt the notes once they move to the new space (with the new space's
+// key), and that cannot happen server side.
 var move_space = space_model.simple_move_space(
 	'board',
 	'boards',
