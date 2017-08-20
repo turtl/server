@@ -19,7 +19,7 @@ var run_upgrade = function(from_version, to_version) {
 var schema = [];
 var builder = {
 	type: {
-		pk_int: 'serial primary key',
+		pk_int: 'bigserial primary key',
 		pk: 'varchar(96) primary key',
 		id_int: 'integer',
 		id: 'varchar(96)',
