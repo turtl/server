@@ -21,7 +21,7 @@ var builder = {
 	type: {
 		pk_int: 'bigserial primary key',
 		pk: 'varchar(96) primary key',
-		id_int: 'integer',
+		id_int: 'biginteger',
 		id: 'varchar(96)',
 		int: 'integer',
 		json: 'jsonb',
@@ -165,7 +165,7 @@ builder.table('sync_users', {
 	fields: {
 		id: ty.pk_int,
 		sync_id: builder.not_null(ty.id_int),
-		user_id: builder.not_null(ty.id),
+		user_id: builder.not_null(ty.id_int),
 	},
 	indexes: [
 		{name: 'sync_scan', fields: ['sync_id', 'user_id']},
