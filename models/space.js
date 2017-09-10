@@ -474,7 +474,18 @@ var del = function(user_id, space_id) {
 		.then(function(_) {
 			return db.delete('spaces', space_id);
 		})
-		.then(function(note_ids, board_ids) {
+		.then(function() {
+			// remove the keychain entries pointing to this space, and make sure
+			// we sync out to the restecpive owners
+			return keychain_model.get_by_item_id(space_id)
+				.map(function(entry) {
+					return db.delete('keychain', entry.id)
+						.then(function() {
+							return sync_model.add_record([entry.user_id], user_id, 'keychain', entry.id, 'delete');
+						});
+				});
+		})
+		.then(function() {
 			return sync_model.add_record(affected_users, user_id, 'space', space_id, 'delete')
 		});
 };

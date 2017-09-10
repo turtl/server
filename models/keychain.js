@@ -16,7 +16,8 @@ vlad.define('keychain', {
 
 /**
  * Delete a keychain entry given a user id/item id. Be careful with this: it
- * doesn't check any ownership/permissions, so use selectively.
+ * doesn't check any ownership/permissions, nor does it create sync records so
+ * use selectively.
  */
 exports.delete_by_user_item = function(user_id, item_id, options) {
 	options || (options = {});
@@ -36,6 +37,13 @@ exports.delete_by_user_item = function(user_id, item_id, options) {
 var get_by_id = function(keychain_id) {
 	return db.by_id('keychain', keychain_id)
 		.then(function(entry) { return entry && entry.data; });
+};
+
+/**
+ * get all keychain entries for an item by id.
+ */
+exports.get_by_item_id = function(item_id) {
+	return db.by_ids('keychain', [item_id], {id_field: 'item_id'})
 };
 
 exports.get_by_user = function(user_id) {
