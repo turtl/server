@@ -107,11 +107,12 @@ var populate_members = function(spaces, options) {
 				.then(function(users) {
 					var user_idx = {};
 					users.forEach(function(u) { user_idx[u.id] = u; });
-
-					members.forEach(function(member) {
+					// filter our members that don't exist anymore
+					members = members.filter(function(member) {
 						var user = user_idx[member.user_id];
-						if(!user) return;
+						if(!user) return false;
 						member.username = user.username;
+						return true;
 					});
 					return members;
 				});
@@ -154,10 +155,15 @@ var get_by_id = function(space_id, options) {
 	return db.by_id('spaces', space_id)
 		.then(function(space) {
 			if(!space) return false;
+			if(options.populate) {
+				return populate_members([space])
+					.then(function(spaces) { return spaces[0]; });
+			}
 			if(options.raw) return space;
 			return space.data;
 		});
 };
+exports.get_by_id = get_by_id;
 
 /**
  * given a space id, pull out all user_ids accociated with the spaces.
@@ -225,6 +231,14 @@ var get_space_user_record = function(user_id, space_id) {
 };
 
 /**
+ * Get all invite records for this space
+ */
+var get_space_invites = function(space_id) {
+	var qry = 'SELECT * FROM spaces_invites WHERE space_id = {{space_id}}';
+	return db.query(qry, {space_id: space_id});
+};
+
+/**
  * get the data tree for a space (all the boards/notes/invites contained in it).
  */
 exports.get_data_tree = function(space_id, options) {
@@ -245,7 +259,7 @@ exports.get_data_tree = function(space_id, options) {
 			return populate_members([space], options);
 		})
 		.then(function(spaces) {
-			return spaces[0].data;
+			return spaces && spaces[0].data;
 		});
 	return Promise.all([
 		space_promise,
@@ -272,6 +286,12 @@ exports.update_member = function(user_id, space_id, member_user_id, data) {
 				throw error.bad_request('you cannot edit the owner');
 			}
 			return db.update('spaces_users', member.id, data);
+		})
+		.tap(function(member) {
+			return user_model.get_by_id(member.user_id)
+				.then(function(user) {
+					member.username = user.username;
+				});
 		})
 		.tap(function() {
 			return exports.get_space_user_ids(space_id)
@@ -426,6 +446,23 @@ var del = function(user_id, space_id) {
 				return board_model.delete_board(user_id, board.id);
 			}, {concurrency: 8});
 			return Promise.all([note_delete, board_delete]);
+		})
+		.then(function() {
+			// build/save sync records for all our deleted invites
+			var inv_map = {};
+			return get_space_invites(space_id)
+				.then(function(invites) {
+					let usernames = invites.map(function(i) {
+						inv_map[i.to_user] = i;
+						return i.to_user;
+					});
+					return user_model.get_by_emails(usernames);
+				})
+				.then(function(users) {
+					return Promise.all(users.map(function(u) {
+						return sync_model.add_record([u.id], user_id, 'invite', inv_map[u.username].id, 'delete');
+					}));
+				});
 		})
 		.then(function() {
 			var params = {space_id: space_id};
@@ -614,7 +651,28 @@ exports.simple_move_space = function(sync_type, sync_table, perms_delete, perms_
 				return {data: item, sync_ids: []};
 			});
 	};
-}
+};
+
+/**
+ * Gets the size of a space in bytes (includes note content and files).
+ */
+exports.get_space_size = function(space_id) {
+	var qry = [
+		'SELECT',
+		'	OCTET_LENGTH(n.data->>\'body\') AS nsize,',
+		'	(data#>>\'{file,size}\')::int AS fsize',
+		'FROM',
+		'	notes n',
+		'WHERE',
+		'	space_id = {{space_id}}',
+	];
+	return db.query(qry.join('\n'), {space_id: space_id})
+		.then(function(notes) {
+			return notes.reduce(function(acc, x) {
+				return acc + parseInt(x.nsize || 0) + parseInt(x.fsize || 0);
+			}, 0);
+		});
+};
 
 sync_model.register('space', {
 	'add': add,

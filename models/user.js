@@ -14,6 +14,7 @@ var invite_model = require('./invite');
 var keychain_model = require('./keychain');
 var analytics = require('./analytics');
 var email_model = require('./email');
+var profile_model = require('./profile');
 
 vlad.define('user', {
 	username: {type: vlad.type.email},
@@ -367,9 +368,20 @@ exports.get_by_ids = function(user_ids, options) {
 	return db.by_ids('users', user_ids)
 		.each(clean_user)
 		.map(function(user) {
+			if(options.profile_size) {
+				return profile_model.get_profile_size(user.id)
+					.then(function(size) {
+						user.profile_size = size;
+						return user;
+					});
+			} else {
+				return user;
+			}
+		})
+		.map(function(user) {
 			if(!options.data) return user;
 			var data = user.data;
-			['id', 'username', 'storage_mb', 'confirmed'].forEach(function(field) {
+			['id', 'username', 'storage_mb', 'confirmed', 'profile_size'].forEach(function(field) {
 				data[field] = user[field];
 			});
 			return data;
@@ -400,7 +412,8 @@ exports.get_by_email = function(email, options) {
 		});
 };
 
-exports.calculate_storage = function(user_id) {
+exports.get_by_emails = function(emails) {
+	return db.by_ids('users', emails, {id_field: 'username'})
 };
 
 var edit = function(user_id, data) {

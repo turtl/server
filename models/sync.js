@@ -48,7 +48,9 @@ var make_sync_record = function(user_id, item_type, item_id, action) {
  * Given an item that can be synced, convert it into a sync record.
  */
 var convert_to_sync = function(item, type, action) {
-	var sync = make_sync_record(item.user_id, type, item.id, action);
+	var user_id = item.user_id;
+	if(!user_id && type == 'invite') user_id = item.from_user_id;
+	var sync = make_sync_record(user_id, type, item.id, action);
 	if(action == 'delete') {
 		sync.data = {id: item.id, deleted: true};
 	} else {
@@ -246,15 +248,26 @@ var populate_shares = function(user_id, sync_records) {
 					return space_model.get_data_tree(sync.item_id, {skip_invites: !has_perm});
 				})
 				.spread(function(space, boards, notes) {
-					populated.push(convert_to_sync(space, 'space', action));
-					boards.forEach(function(item) {
-						var sync = convert_to_sync(item, 'board', action);
+					// make sure the space actually exists before creating our
+					// sync records. otherwise, we just pass through the
+					// original sync record, but with our add/delete action
+					// (and we'll have {missing: true} for our `data` tee hee)
+					if(space) {
+						populated.push(convert_to_sync(space, 'space', action));
+						boards.forEach(function(item) {
+							var sync = convert_to_sync(item, 'board', action);
+							populated.push(sync);
+						});
+						notes.forEach(function(item) {
+							var sync = convert_to_sync(item, 'note', action);
+							populated.push(sync);
+						});
+					} else {
+						// ah ah! alex, remember what we talked about? mmhmm
+						// thank you. shutup. thank you.
+						sync.action = action;
 						populated.push(sync);
-					});
-					notes.forEach(function(item) {
-						var sync = convert_to_sync(item, 'note', action);
-						populated.push(sync);
-					});
+					}
 				});
 		} else {
 			populated.push(sync);

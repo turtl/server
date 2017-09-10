@@ -3,6 +3,7 @@ var tres = require('../helpers/tres');
 var config = require('../helpers/config');
 var log = require('../helpers/log');
 var analytics = require('../models/analytics');
+var profile_model = require('../models/profile');
 
 exports.route = function(app) {
 	app.post('/users', join);
@@ -13,6 +14,7 @@ exports.route = function(app) {
 	app.delete('/users/:user_id', delete_account);
 	app.post('/users/confirmation/resend', resend_confirmation);
 	app.put('/users/:user_id', update_user);
+	app.get('/users/:user_id/profile-size', get_profile_size);
 };
 
 /**
@@ -34,7 +36,7 @@ var get_by_id = function(req, res) {
 	if(user_id != cur_user_id) {
 		return tres.err(res, new Error('you can\'t grab another user\'s info'));
 	}
-	tres.wrap(res, model.get_by_id(user_id, {data: true}));
+	tres.wrap(res, model.get_by_id(user_id, {data: true, profile_size: true}));
 };
 
 var get_by_email = function(req, res) {
@@ -95,5 +97,18 @@ var update_user = function(req, res) {
 	var user_id = req.params.user_id;
 	var data = req.body;
 	tres.wrap(res, model.update(cur_user_id, user_id, data));
+};
+
+/**
+ * grab the current user's profile size in bytes, along with their usage
+ * percentage
+ */
+var get_profile_size = function(req, res) {
+	var cur_user_id = req.user.id;
+	var user_id = req.params.user_id;
+	if(user_id != cur_user_id) {
+		return tres.err(res, new Error('you can\'t get another user\'s profile data'));
+	}
+	tres.wrap(res, profile_model.get_profile_size(cur_user_id));
 };
 

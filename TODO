@@ -1,1 +1,3 @@
+- calculate storage (see user model)
+- on space delete, delete keychain entries for that space
 

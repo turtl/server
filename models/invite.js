@@ -195,11 +195,12 @@ exports.accept = function(user_id, space_id, invite_id, post_accept_fn) {
 			return delete_invite(space_id, invite_id);
 		})
 		.then(function(invite) {
-			return space_model.get_by_id(space_id)
+			return space_model.get_by_id(space_id, {populate: true})
 		})
 		.then(function(space) {
+			var space = space.data;
 			return space_model.get_space_user_ids(space_id)
-				.then(function(space_users) {
+				.tap(function(space_users) {
 					return Promise.all([
 						sync_model.add_record([user_id], user_id, 'space', space_id, 'share'),
 						sync_model.add_record([user_id], user_id, 'invite', invite_id, 'delete'),
@@ -212,7 +213,7 @@ exports.accept = function(user_id, space_id, invite_id, post_accept_fn) {
 					return space;
 				});
 		})
-		.tap(function(invite) {
+		.tap(function(_invite) {
 			if(post_accept_fn) post_accept_fn(invite);
 			return {accepted: true};
 		});
@@ -231,8 +232,11 @@ exports.update = function(user_id, space_id, invite_id, data) {
 				data: invite_data
 			};
 			return db.update('spaces_invites', invite_id, update)
-				.then(function(item) {
-					var inv = item.data;
+				.then(function() {
+					return link([invite_id])
+						.then(function(invites) { return invites[0]; });
+				})
+				.then(function(inv) {
 					return space_model.get_space_user_ids(space_id)
 						.then(function(user_ids) {
 							// do an "edit" sync on the space, not the invite.
