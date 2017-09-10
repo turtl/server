@@ -102,6 +102,7 @@ builder.table('keychain', {
 	},
 	indexes: [
 		{name: 'user_item', fields: ['user_id', 'item_id']},
+		{name: 'item', fields: ['item_id']},
 	],
 });
 
