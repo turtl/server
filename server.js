@@ -10,6 +10,8 @@ var cors = require('./helpers/cors');
 var turtl_auth = require('./helpers/auth');
 var config = require('./helpers/config');
 var error = require('./helpers/error');
+var fs = require('fs');
+var plugins = require('./helpers/plugins');
 
 var app = express();
 app.disable('etag');
@@ -37,6 +39,23 @@ app.get('/', function(req, res) {
 		var controller = require('./controllers/'+con);
 		controller.route(app);
 	});
+
+try {
+	var plugin_dir = config.plugins.plugin_location || './plugins'
+	var plugin_list = fs.readdirSync(plugin_dir);
+} catch(e) {
+	log.info('Problem loading plugins: ', e);
+}
+plugin_list.forEach(function(plugin) {
+	if(plugin[0] == '.') return;
+	if(plugin == 'node_modules') return;
+	var stats = fs.lstatSync(plugin_dir+'/'+plugin);
+	if(!stats.isDirectory()) return;
+	log.info('Loading plugin: '+plugin);
+	var loader = require(plugin_dir+'/'+plugin+'/main.js');
+	var plugin_config = config.plugins[plugin];
+	loader.load(plugins.register.bind(plugins, plugin), plugin_config);
+});
 
 app.listen(config.server.port);
 log.info('Listening for turtls on port '+config.server.port+'...');

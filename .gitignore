@@ -3,3 +3,4 @@ node_modules
 npm-debug.log
 /config/config.yaml
 /sess.vim
+/plugins
