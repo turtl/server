@@ -60,14 +60,3 @@ s3:
   bucket: ''
   endpoint: 'https://s3.amazonaws.com'
 
-sendgrid:
-  enabled: true
-  apikey: ''
-
-analytics:
-  enabled: false
-  mixpanel:
-    token: ''
-    secret: ''
-
-

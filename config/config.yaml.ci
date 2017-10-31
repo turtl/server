@@ -13,8 +13,6 @@ db:
 loglevel: 'info'
 
 app:
-  # ALWAYS false in production. Always.
-  # Set to 'I UNDERSTAND THIS VIOLATES THE PRIVACY OF MY USERS' to enable
   enable_bookmarker_proxy: false
   # no trailing slash
   api_url: 'http://api.yourdomain.com:8181'
@@ -23,9 +21,6 @@ app:
     admin: 'admin@turtlapp.com'
     info: 'Turtl <info@turtlapp.com>'
     invites: 'invites@turtlapp.com'
-  # TODO: replace this with a long, unique value. seriously. write down a dream
-  # you had, or the short story you came up with during your creative writing
-  # class in your freshmen year of college. have fun with it.
   secure_hash_salt: "Plaque is a figment of the liberal media and the dental industry to scare you into buying useless appliances and pastes. Now, I've read the arguments on both sides and I haven't found any evidence yet to support the need to brush your teeth. Ever."
 
 sync:
@@ -43,31 +38,14 @@ plugins:
     enabled: false
 
 uploads:
-  # if set to a path, files will be uploaded to the local filesystem instead of
-  # S3. otherwise, set to false
   local: '/tmp/turtl/server/public/uploads'
-  # if true, downloading local files will be proxied through the turtl server.
-  # this avoids needing to set up any CORS config in your favorite webserver,
-  # but may slightly affect performance on high-demand servers.
   local_proxy: true
-  # if local_proxy is false, this is should be the url path the uploaded files
-  # are publicly available on
-  url: 'http://api.turtl.dev/uploads'
+  url: 'http://127.0.0.1:8181/uploads'
 
 s3:
   token: 'IHADAPETSNAKEBUTHEDIEDNOOOOO'
   secret: ''
   bucket: ''
   endpoint: 'https://s3.amazonaws.com'
-
-sendgrid:
-  enabled: true
-  apikey: ''
-
-analytics:
-  enabled: false
-  mixpanel:
-    token: ''
-    secret: ''
 
 
