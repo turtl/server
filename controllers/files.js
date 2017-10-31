@@ -27,6 +27,9 @@ var proxy_local_file = function(req, res) {
 		.then(function(stream) {
 			stream.on('error', function() { stream.end(); });
 			stream.pipe(res);
+		})
+		.catch(function(err) {
+			tres.err(res, err);
 		});
 };
 
