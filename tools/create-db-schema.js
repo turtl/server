@@ -21,7 +21,7 @@ var builder = {
 	type: {
 		pk_int: 'bigserial primary key',
 		pk: 'varchar(96) primary key',
-		id_int: 'biginteger',
+		id_int: 'bigint',
 		id: 'varchar(96)',
 		int: 'integer',
 		json: 'jsonb',
