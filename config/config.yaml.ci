@@ -6,8 +6,8 @@ db:
   host: '127.0.0.1'
   port: 5432
   database: 'turtl'
-  user: 'slappy'
-  password: 'floppy'
+  user: 'turtl'
+  password: ''
   pool: 24
 
 loglevel: 'debug'

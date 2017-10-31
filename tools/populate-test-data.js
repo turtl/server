@@ -1,9 +1,8 @@
 /**
- * This file defines (and creates) our database schema.
- *
- * NOTE: we make liberal use of the text type because in postgres there's no
- * difference between varchar and text under the hood, but varchar can be
- * excessively limiting and hard to change later on.
+ * This file populates the database/filesystem with a profile we use for our
+ * integration tests. It seems to me it would be better to have this populate AS
+ * and integration test, but since it's hard to "order" the tests, for now this
+ * is where the data lives.
  */
 
 var db = require('../helpers/db');
@@ -3114,6 +3113,7 @@ function create_test_file() {
 		'BTWxop6vFNq+IHIC1S+xE2/T9y9Y2TeH1u4QN8Fp5R8TBfuYH/4fn7NHe2ME4w==',
 	].join('');
 	var binary_data = Buffer.from(filedata, 'base64');
-	fs.writeFileSync(__dirname+'/../public/uploads/015d0b84f5562af6297cf0cc29180f9cc45f4c80e5b30238581f845367f9c404ef3fb8fb0a5a00f5', binary_data);
+	var filename = config.uploads.local+'/015d0b84f5562af6297cf0cc29180f9cc45f4c80e5b30238581f845367f9c404ef3fb8fb0a5a00f5';
+	fs.writeFileSync(filename, binary_data);
 }
 
