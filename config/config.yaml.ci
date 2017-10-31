@@ -10,7 +10,7 @@ db:
   password: ''
   pool: 24
 
-loglevel: 'debug'
+loglevel: 'info'
 
 app:
   # ALWAYS false in production. Always.
