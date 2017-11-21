@@ -74,6 +74,16 @@ var clean_user = function(user) {
 	return user;
 };
 
+var auth_hash = function(authkey) {
+	// two iterations. yes, two. if someone gets the database, they
+	// won't be able to crack the real auth key out of it since it's
+	// just a binary blob anyway, meaning this step only exists to keep
+	// them from being able to impersonate the user (not to hide the
+	// secret it holds, since there IS no secret...even if they cracked
+	// the auth data, they'd have to have the user's key to decrypt it).
+	return secure_hash(authkey, {output: 'base64', iter: 2});
+};
+
 exports.check_auth = function(authinfo) {
 	if(!authinfo) return Promise.reject(error.forbidden('bad login'));
 	var base64_auth = authinfo.replace(/^Basic */, '');
@@ -85,7 +95,7 @@ exports.check_auth = function(authinfo) {
 	return db.first('SELECT * FROM users WHERE username = {{username}}', {username: username})
 		.then(function(user) {
 			if(!user) throw error.forbidden('bad login');
-			if(!secure_compare(user.auth, secure_hash(auth, {output: 'base64', iter: 2}))) throw error.forbidden('bad login');
+			if(!secure_compare(user.auth, auth_hash(auth))) throw error.forbidden('bad login');
 			return clean_user(user);
 		});
 };
@@ -107,13 +117,7 @@ exports.join = function(userdata) {
 	return db.first('SELECT id FROM users WHERE username = {{username}} LIMIT 1', {username: userdata.username})
 		.then(function(existing) {
 			if(existing) throw error.forbidden('the account "'+userdata.username+'" already exists');
-			// two iterations. yes, two. if someone gets the database, they
-			// won't be able to crack the real auth key out of it since it's
-			// just a binary blob anyway, meaning this step only exists to keep
-			// them from being able to impersonate the user (not to hide the
-			// secret it holds, since there IS no secret...even if they cracked
-			// the auth data, they'd have to have the user's key to decrypt it).
-			var auth = secure_hash(userdata.auth, {output: 'base64', iter: 2});
+			var auth = auth_hash(userdata.auth);
 			return db.insert('users', {
 				username: userdata.username,
 				auth: auth,
@@ -279,7 +283,7 @@ exports.update = function(cur_user_id, user_id, data) {
 		})
 		// update the user. spill the wine.
 		.then(function() {
-			var auth = secure_hash(data.auth, {output: 'base64', iter: 2});
+			var auth = auth_hash(data.auth);
 			var qry = ['UPDATE users'];
 			var sets = [
 				'auth = {{auth}}',
