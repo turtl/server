@@ -330,7 +330,7 @@ exports.sync_from = function(user_id, from_sync_id, poll) {
 				.then(function(sync_records) {
 					return [
 						sync_records,
-						latest_sync_id,
+						latest_sync_id || from_sync_id,
 					];
 				});
 		});
