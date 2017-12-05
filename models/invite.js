@@ -94,10 +94,10 @@ exports.send = function(user_id, space_id, data) {
 			]);
 		})
 		.spread(function(invite_exists, member_exists) {
+			// don't allow inviting a current member. that's jsut stupid.
+			if(member_exists) throw error.bad_request('that user is already a member of this space');
 			// don't re-create an existing invite. skip it, don't email, etc etc
 			if(invite_exists) error.promise_throw('already_exists', invite_exists);
-			// don't allow inviting a current member. that's jsut stupid.
-			if(member_exists) error.promise_throw('already_exists', member_exists);
 
 			return db.insert('spaces_invites', {
 				id: data.id,
