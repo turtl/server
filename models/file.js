@@ -57,7 +57,9 @@ var geturl_s3 = function(file_id) {
 var delete_local = function(file_id) {
 	return new Promise(function(resolve, reject) {
 		fs.unlink(config.uploads.local+'/'+file_id, function(err, _) {
-			if(err) return reject(err);
+			if(err && !err.message.match(/ENOENT/)) {
+				return reject(err);
+			}
 			resolve(true);
 		});
 	});
