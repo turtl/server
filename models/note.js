@@ -128,7 +128,10 @@ var add = space_model.simple_add(
 	'note',
 	'notes',
 	space_model.permissions.add_note,
-	function(data) { return {id: data.id, space_id: data.space_id, board_id: data.board_id, data: db.json(data)}; }
+	function(data) {
+		delete data.has_file;
+		return {id: data.id, space_id: data.space_id, board_id: data.board_id, data: db.json(data)};
+	}
 );
 
 var edit = space_model.simple_edit(
@@ -136,7 +139,10 @@ var edit = space_model.simple_edit(
 	'notes',
 	space_model.permissions.edit_note,
 	get_by_id,
-	function(data) { return {id: data.id, space_id: data.space_id, board_id: data.board_id, data: db.json(data)}; }
+	function(data, existing) {
+		data.has_file = existing.has_file;
+		return {id: data.id, space_id: data.space_id, board_id: data.board_id, data: db.json(data)};
+	}
 );
 
 var delete_note = space_model.simple_delete(
