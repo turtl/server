@@ -545,9 +545,9 @@ exports.simple_edit = function(sync_type, sync_table, sync_permission, get_by_id
 				data.user_id = item_data.user_id;
 				data.space_id = item_data.space_id;
 				return exports.permissions_check(user_id, data.space_id, sync_permission)
-			})
-			.then(function(_) {
-				return db.update(sync_table, data.id, make_item_fn(data));
+					.then(function(_) {
+						return db.update(sync_table, data.id, make_item_fn(data, item_data));
+					});
 			})
 			.tap(function(item) {
 				return exports.get_space_user_ids(data.space_id)
