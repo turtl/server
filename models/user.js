@@ -57,11 +57,10 @@ var random_token = function(options) {
 	options || (options = {});
 	var hash = options.hash || 'sha256';
 
-	var read_it_back_francine = 'and if you ever put your goddamn hands on my wife again, i will...';
-	var rand = crypto.randomBytes(64).toString('hex');
+	var rand = crypto.randomBytes(64);
 	return crypto
 		.createHash(hash)
-		.update(rand+read_it_back_francine+(new Date().getTime()))
+		.update(rand)
 		.digest('hex');
 };
 exports.random_token = random_token;
