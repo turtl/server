@@ -43,6 +43,7 @@ var get_by_email = function(req, res) {
 	var email = req.params.email;
 	var promise = model.get_by_email(email, {data: true})
 		.tap(function(user) { 
+			if(!user) return user;
 			delete user.body;
 			delete user.storage_mb;
 		});

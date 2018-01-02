@@ -403,7 +403,7 @@ exports.get_by_email = function(email, options) {
 	options || (options = {});
 	return db.first('SELECT * FROM users WHERE username = {{email}} LIMIT 1', {email: email})
 		.then(function(user) {
-			if(!user) return false;
+			if(!user) return null;
 			if(options.raw) return user;
 			if(options.data) {
 				var data = user.data;
