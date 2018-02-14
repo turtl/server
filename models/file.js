@@ -2,6 +2,7 @@
 
 var Promise = require('bluebird');
 var config = require('../helpers/config');
+var error = require('../helpers/error');
 var fs = require('fs');
 var AWS = require('aws-sdk');
 AWS.config.update({accessKeyId: config.s3.token, secretAccessKey: config.s3.secret});
@@ -106,7 +107,7 @@ exports.stream_local = function(note_id) {
 	return new Promise(function(resolve, reject) {
 		var path = config.uploads.local+'/'+note_id;
 		fs.exists(path, function(exists) {
-			if(!exists) return reject(new Error('local file for note '+note_id+' not found'));
+			if(!exists) return reject(error.not_found('local file for note '+note_id+' not found'));
 			resolve(fs.createReadStream(path));
 		});
 	});
