@@ -11,13 +11,13 @@
     "bluebird": "3.4.7",
     "body-parser": "1.15.2",
     "express": "4.14.0",
-    "js-yaml": "3.7.0",
     "method-override": "2.3.7",
     "morgan": "1.7.0",
     "pg": "6.1.2",
     "request": "2.81.0",
     "s3-upload-stream": "1.0.7",
     "turtl-lib-permissions": "git+https://github.com/turtl/lib-permissions.git#master",
-    "winston": "2.3.0"
+    "winston": "2.3.0",
+    "yaml-env": "git+https://github.com/orthecreedence/yaml-env.git#master"
   }
 }
