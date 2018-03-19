@@ -58,7 +58,7 @@ exports.get_by_user = function(user_id) {
 
 var add = function(user_id, data) {
 	data.user_id = user_id;
-	var data = vlad.validate('keychain', data);
+	data = vlad.validate('keychain', data);
 	return db.insert('keychain', {id: data.id, user_id: user_id, item_id: data.item_id, data: data})
 		.tap(function(item) {
 			return sync_model.add_record([user_id], user_id, 'keychain', item.id, 'add')
@@ -69,7 +69,7 @@ var add = function(user_id, data) {
 };
 
 var edit = function(user_id, data) {
-	var data = vlad.validate('keychain', data);
+	data = vlad.validate('keychain', data);
 	return get_by_id(data.id)
 		.then(function(item_data) {
 			if(!item_data) throw error.not_found('that keychain entry is missing');

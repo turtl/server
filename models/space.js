@@ -270,7 +270,7 @@ exports.get_data_tree = function(space_id, options) {
 
 exports.update_member = function(user_id, space_id, member_user_id, data) {
 	try {
-		var data = vlad.validate('space-member', data);
+		data = vlad.validate('space-member', data);
 	} catch(e) {
 		return Promise.reject(e);
 	}
@@ -374,7 +374,7 @@ exports.set_owner = function(user_id, space_id, new_user_id) {
 
 var add = function(user_id, data) {
 	data.user_id = user_id;
-	var data = vlad.validate('space', data);
+	data = vlad.validate('space', data);
 	return db.insert('spaces', {id: data.id, data: data})
 		.tap(function(space) {
 			return exports.create_space_user_record(space.id, user_id, roles.owner);
@@ -392,7 +392,7 @@ var add = function(user_id, data) {
 
 var edit = function(user_id, data) {
 	var space_id = data.id;
-	var data = vlad.validate('space', data);
+	data = vlad.validate('space', data);
 	return exports.permissions_check(user_id, space_id, permissions.edit_space)
 		.then(function(_) {
 			return get_by_id(space_id)
@@ -509,7 +509,7 @@ var link = function(ids) {
 exports.simple_add = function(sync_type, sync_table, sync_permission, make_item_fn) {
 	return function(user_id, data) {
 		data.user_id = user_id;
-		var data = vlad.validate(sync_type, data);
+		data = vlad.validate(sync_type, data);
 		var space_id = data.space_id;
 		return exports.permissions_check(user_id, space_id, sync_permission)
 			.then(function(_) {
@@ -533,7 +533,7 @@ exports.simple_add = function(sync_type, sync_table, sync_permission, make_item_
  */
 exports.simple_edit = function(sync_type, sync_table, sync_permission, get_by_id, make_item_fn) {
 	return function(user_id, data) {
-		var data = vlad.validate(sync_type, data);
+		data = vlad.validate(sync_type, data);
 		return get_by_id(data.id)
 			.then(function(item_data) {
 				if(!item_data) throw error.not_found(sync_type+' '+data.id+' does not exist');
@@ -596,7 +596,7 @@ exports.simple_delete = function(sync_type, sync_table, sync_permissions, get_by
  */
 exports.simple_move_space = function(sync_type, sync_table, perms_delete, perms_add, get_by_id, post_move_fn) {
 	return function(user_id, data) {
-		var data = vlad.validate(sync_type, data);
+		data = vlad.validate(sync_type, data);
 		var item_id = data.id;
 		var old_space_id = null;
 		var new_space_id = null;

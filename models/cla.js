@@ -28,7 +28,7 @@ exports.sign = function(sig) {
 		return Promise.reject(error.bad_request('Please enter the Company/Organization/Entity name.'));
 	}
 	try {
-		var sig = vlad.validate('cla', sig);
+		sig = vlad.validate('cla', sig);
 	} catch(err) {
 		return Promise.reject(err);
 	}

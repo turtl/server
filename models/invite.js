@@ -78,7 +78,7 @@ exports.create_sync_records_for_email = function(user_id, email) {
 exports.send = function(user_id, space_id, data) {
 	var invite;
 	try {
-		var data = vlad.validate('invite', data);
+		data = vlad.validate('invite', data);
 	} catch(e) {
 		return Promise.reject(e);
 	}
@@ -119,7 +119,7 @@ exports.send = function(user_id, space_id, data) {
 			var invite_title = data.title;
 			var subject = 'You have been invited to a Turtl space by '+from_user.username;
 			var name = (from_user.data || {}).name;
-			var name = name ? name + ' ('+from_user.username+')' : from_user.username;
+			name = name ? name + ' ('+from_user.username+')' : from_user.username;
 			var action = '';
 			if(to_user) {
 				action = [
@@ -198,7 +198,7 @@ exports.accept = function(user_id, space_id, invite_id, post_accept_fn) {
 			return space_model.get_by_id(space_id, {populate: true})
 		})
 		.then(function(space) {
-			var space = space.data;
+			space = space.data;
 			return space_model.get_space_user_ids(space_id)
 				.tap(function(space_users) {
 					return Promise.all([

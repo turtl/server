@@ -18,7 +18,7 @@ module.exports = function(req, res, next) {
 	for(var i = 0, n = public_routes.length; i < n; i++) {
 		var pub = public_routes[i];
 		if(pub.test(method_url)) return next();
-	};
+	}
 	return user_model.check_auth(auth)
 		.then(function(user) {
 			req.user = user;

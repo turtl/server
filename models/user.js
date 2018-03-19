@@ -104,7 +104,7 @@ exports.join = function(userdata) {
 	if(!userdata.username) return Promise.reject(error.bad_request('missing `username` key (must be a valid email)'));
 	if(!userdata.username.match(/@/)) return Promise.reject(error.bad_request('please enter a valid email'));
 	try {
-		var data = vlad.validate('user', userdata.data || {});
+		data = vlad.validate('user', userdata.data || {});
 	} catch(e) {
 		return Promise.reject(e);
 	}
@@ -422,7 +422,7 @@ exports.get_by_emails = function(emails) {
 
 var edit = function(user_id, data) {
 	if(user_id != data.id) return Promise.reject(error.forbidden('you cannot edit someone else\'s user record. shame shame.'));
-	var data = vlad.validate('user', data);
+	data = vlad.validate('user', data);
 	return db.update('users', user_id, {data: data})
 		.tap(function(user) {
 			return sync_model.add_record([], user_id, 'user', user_id, 'edit')

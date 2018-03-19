@@ -188,10 +188,9 @@ var link_sync_records = function(sync_records) {
 			throw error.bad_request('Missing sync handler for type `'+type+'.link`');
 		}
 		var sync_records = mapped[type];
-		if(sync_records.length == 0) {
-			var promise = Promise.resolve([]);
-		} else {
-			var promise = link(sync_records.map(function(s) { return s.item_id; }))
+		var promise = Promise.resolve([]);
+		if(sync_records.length > 0) {
+			promise = link(sync_records.map(function(s) { return s.item_id; }))
 				.then(function(items) {
 					return populate_sync_records_with_items(sync_records, items);
 				});
@@ -395,7 +394,6 @@ exports.bulk_sync = function(user_id, sync_records, client) {
 	var success_idx = {};
 
 	var successes = [];
-	var fail_err = null;
 	return Promise.each(sync_records, function(sync) {
 		var sync_client_id = sync.id;
 		return process_incoming_sync(user_id, sync)
@@ -423,8 +421,6 @@ exports.bulk_sync = function(user_id, sync_records, client) {
 				sync.error = {code: err.status || 500, msg: err.message};
 				throw err;
 			});
-	}).catch(function(err) {
-		fail_err = err;
 	}).then(function() {
 		return {
 			// return all successful syncs
@@ -504,7 +500,7 @@ exports.full_sync = function(user_id) {
 		})
 		.then(function(sync_id) {
 			return {
-				sync_id: sync_id,
+				sync_id: sync_id || 0,
 				records: sync_records.map(function(s) {s.id = 0; return s;}),
 			};
 		});

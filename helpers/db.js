@@ -52,9 +52,10 @@ var builder = function(qry, query_data) {
 		if(val && val._omg_literally) return val._omg_literally;
 
 		// do some data massaging
-		if(val === null) { }
-		else if(typeof(val) == 'object') val = exports.json(val);
-		else val = val.toString();
+		if(val !== null) {
+			if(typeof(val) == 'object') val = exports.json(val);
+			else val = val.toString();
+		}
 
 		// return raw values directly into the query
 		if(raw) return val;
@@ -76,17 +77,17 @@ var make_client = function(client, release) {
 			options || (options = {});
 			var query_type = options.type;
 			var built = builder(qry, query_data);
-			var qry = built.query;
+			var built_qry = built.query;
 			var vals = built.vals;
 
-			log.debug('db: query: ', qry, vals);
+			log.debug('db: query: ', built_qry, vals);
 			return new Promise(function(resolve, reject) {
-				client.query(qry, vals, function(err, result) {
+				client.query(built_qry, vals, function(err, result) {
 					if(err) return reject(err);
-					switch((query_type || result.command).toLowerCase())
-					{
-						case 'select': resolve(result.rows); break;
-						default: resolve(result); break;
+					if((query_type || result.command).toLowerCase() == 'select') {
+						resolve(result.rows);
+					} else {
+						resolve(result);
 					}
 				});
 			});
