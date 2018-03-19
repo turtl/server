@@ -14,8 +14,11 @@ var user_model = require('../models/user');
 function main() {
 	var id_promise = Promise.resolve(uid);
 	if(uid.toString().match(/@/)) {
-		id_promise = user_model.get_by_email(user_id, {raw: true})
-			.then(function(user) { return user.id; });
+		id_promise = user_model.get_by_email(uid, {raw: true})
+			.then(function(user) {
+				if(!user) throw new Error('User '+uid+' wasn\'t found.');
+				return user.id;
+			});
 	}
 	var user_id;
 	return id_promise

@@ -123,7 +123,7 @@ exports.join = function(userdata) {
 				confirmed: false,
 				confirmation_token: token,
 				data: db.json(userdata.data),
-				storage_mb: 100
+				account_type: 0
 			});
 		})
 		.tap(function(user) {
@@ -385,7 +385,7 @@ exports.get_by_ids = function(user_ids, options) {
 		.map(function(user) {
 			if(!options.data) return user;
 			var data = user.data;
-			['id', 'username', 'storage_mb', 'confirmed', 'profile_size'].forEach(function(field) {
+			['id', 'username', 'account_type', 'confirmed', 'profile_size'].forEach(function(field) {
 				data[field] = user[field];
 			});
 			return data;
@@ -407,7 +407,7 @@ exports.get_by_email = function(email, options) {
 			if(options.raw) return user;
 			if(options.data) {
 				var data = user.data;
-				['id', 'username', 'storage_mb', 'confirmed'].forEach(function(field) {
+				['id', 'username', 'account_type', 'confirmed'].forEach(function(field) {
 					data[field] = user[field];
 				});
 				return data;

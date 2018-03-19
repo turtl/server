@@ -41,7 +41,21 @@ var builder = {
 		fields.updated = builder.type.date+' default CURRENT_TIMESTAMP';
 		schema.push([
 			'create table if not exists '+table_name+' (',
-			Object.keys(fields).map(function(name) { return name+' '+fields[name]; }),
+			Object.keys(fields).map(function(name) {
+				var type = fields[name];
+				var options = {};
+				if(typeof(type) == 'object') {
+					options = type;
+					type = type.type;
+					delete options.type;
+				}
+				var sql_field = [name, type];
+				if(typeof(options.default) != 'undefined') {
+					sql_field.push('DEFAULT '+options.default);
+				}
+				if(options.not_null) sql_field.push('NOT NULL');
+				return sql_field.join(' ');
+			}),
 			')',
 		].join(' '));
 		if(indexes && indexes.length) {
@@ -181,7 +195,11 @@ builder.table('users', {
 		confirmed: builder.not_null(ty.bool),
 		confirmation_token: ty.text,
 		data: ty.json,
-		storage_mb: ty.int,
+		account_type: {
+			type: ty.int,
+			default: 0,
+			not_null: true,
+		},
 	},
 	indexes: [
 		// NOTE: no `auth` index...pull out by username, do double-hmac compare

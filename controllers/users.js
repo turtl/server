@@ -45,7 +45,7 @@ var get_by_email = function(req, res) {
 		.tap(function(user) { 
 			if(!user) return user;
 			delete user.body;
-			delete user.storage_mb;
+			delete user.account_type;
 		});
 	tres.wrap(res, promise);
 };
