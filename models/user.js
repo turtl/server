@@ -104,7 +104,7 @@ exports.join = function(userdata) {
 	if(!userdata.username) return Promise.reject(error.bad_request('missing `username` key (must be a valid email)'));
 	if(!userdata.username.match(/@/)) return Promise.reject(error.bad_request('please enter a valid email'));
 	try {
-		data = vlad.validate('user', userdata.data || {});
+		var data = vlad.validate('user', userdata.data || {});
 	} catch(e) {
 		return Promise.reject(e);
 	}
