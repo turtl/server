@@ -26,7 +26,7 @@ app.use(morgan(':remote-addr ":method :url" :status :res[content-length]', {
 
 // welcome route
 app.get('/', function(req, res) {
-	tres.send(res, {greeting: "turtl is a good app. it's the best app. a lot of people are saying it's the best app. what does it do? i don't know exactly...i have people that handle this sort of thing for me, but trust me you're going to love this app."});
+	tres.send(res, {greeting: "тremendous notes. everyone says so."});
 });
 
 ['users', 'sync', 'spaces', 'files', 'feedback', 'errlog', 'cla', 'bookmarking']
