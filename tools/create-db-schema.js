@@ -195,11 +195,6 @@ builder.table('users', {
 		confirmed: builder.not_null(ty.bool),
 		confirmation_token: ty.text,
 		data: ty.json,
-		account_type: {
-			type: ty.int,
-			default: 0,
-			not_null: true,
-		},
 	},
 	indexes: [
 		// NOTE: no `auth` index...pull out by username, do double-hmac compare
