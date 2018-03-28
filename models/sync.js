@@ -315,7 +315,9 @@ var poll_sync_items = function(user_id, from_sync_id, poll, cutoff) {
  * Grab all the sync records for a user id AFTER the given sync id.
  */
 exports.sync_from = function(user_id, from_sync_id, poll) {
-	if(!from_sync_id) return Promise.reject(error.bad_request('missing `sync_id` var'));
+	if(!from_sync_id && from_sync_id !== 0) {
+		return Promise.reject(error.bad_request('missing `sync_id` var'));
+	}
 	var cutoff = (new Date().getTime()) + (1000 * 90);
 	return poll_sync_items(user_id, from_sync_id, poll, cutoff)
 		.then(function(sync_records) {
