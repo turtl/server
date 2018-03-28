@@ -316,7 +316,7 @@ var poll_sync_items = function(user_id, from_sync_id, poll, cutoff) {
  */
 exports.sync_from = function(user_id, from_sync_id, poll) {
 	if(!from_sync_id && from_sync_id !== 0) {
-		return Promise.reject(error.bad_request('missing `sync_id` var'));
+		return Promise.reject(error.bad_request('missing `sync_id` var: '+JSON.stringify(from_sync_id)));
 	}
 	var cutoff = (new Date().getTime()) + (1000 * 90);
 	return poll_sync_items(user_id, from_sync_id, poll, cutoff)
