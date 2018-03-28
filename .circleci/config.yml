@@ -1,0 +1,67 @@
+aliases:
+  - &defaults
+    working_directory: /tmp/turtl/server
+
+version: 2
+jobs:
+  test:
+    <<: *defaults
+
+    docker:
+      - image: circleci/node:4.8.3
+      - image: circleci/postgres:9.6.2-alpine
+        environment:
+          - POSTGRES_USER=turtl
+          - POSTGRES_DB=turtl
+
+    steps:
+      - checkout
+
+      # set up/run server
+      - run: cp config/config.yaml.ci config/config.yaml
+      - restore_cache:
+          key: server-npm-v1-{{ checksum "../server/package.json" }}
+          key: server-npm-v1-
+      - run: npm install
+      - save_cache:
+          key: server-npm-v1-{{ checksum "../server/package.json" }}
+          paths:
+            - node_modules
+      - run: mkdir -p plugins
+      - run: mkdir -p public/uploads
+      - run: sleep 5
+      - run: node tools/create-db-schema.js
+      - run: node tools/populate-test-data.js
+      - run:
+          command: node server.js
+          background: true
+
+      # install rust
+      - run: gpg --import build-tools/rust.gpg.pub
+      - run: wget https://static.rust-lang.org/rustup.sh -O /tmp/rustup.sh && chmod 0750 /tmp/rustup.sh
+      - run: sudo /tmp/rustup.sh --revision=1.24.1
+
+      # set up/run core
+      - run: git clone https://github.com/turtl/core-rs ../core-rs
+      - run: cd ../core-rs && bash ./.circleci/prepare-config.sh
+      - run: |
+          cd ../core-rs/integration-tests
+          mkdir -p /tmp/turtl/integration
+          make \
+            RUST_BACKTRACE=1 \
+            TURTL_LOGLEVEL=info \
+            TURTL_CONFIG_FILE=../config.yaml \
+            LD_LIBRARY_PATH="${LD_LIBRARY_PATH}:../target/release" \
+            test
+
+workflows:
+  version: 2
+  full:
+    jobs:
+      - test:
+          filters:
+            branches:
+              only: master
+            tags:
+              only: /.*/
+
