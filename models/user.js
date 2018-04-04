@@ -122,7 +122,7 @@ exports.join = function(userdata) {
 				auth: auth,
 				confirmed: false,
 				confirmation_token: token,
-				data: db.json(userdata.data),
+				data: db.json(data),
 			});
 		})
 		.tap(function(user) {
