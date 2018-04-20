@@ -5,7 +5,13 @@ var config = require('../helpers/config');
 var error = require('../helpers/error');
 var fs = require('fs');
 var AWS = require('aws-sdk');
-AWS.config.update({accessKeyId: config.s3.token, secretAccessKey: config.s3.secret});
+AWS.config.update({
+	accessKeyId: config.s3.token,
+	secretAccessKey: config.s3.secret,
+	s3: {
+		endpoint: config.s3.endpoint,
+	},
+});
 var s3_stream = require('s3-upload-stream')(new AWS.S3());
 
 /**
