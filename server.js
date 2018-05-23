@@ -1,17 +1,17 @@
 "use strict";
 
-var express = require('express');
-var morgan = require('morgan');
-var body_parser = require('body-parser');
-var method_override = require('method-override');
-var log = require('./helpers/log');
-var tres = require('./helpers/tres');
-var cors = require('./helpers/cors');
-var turtl_auth = require('./helpers/auth');
-var config = require('./helpers/config');
-var error = require('./helpers/error');
-var fs = require('fs');
-var plugins = require('./helpers/plugins');
+const express = require('express');
+const morgan = require('morgan');
+const body_parser = require('body-parser');
+const method_override = require('method-override');
+const log = require('./helpers/log');
+const tres = require('./helpers/tres');
+const cors = require('./helpers/cors');
+const turtl_auth = require('./helpers/auth');
+const config = require('./helpers/config');
+const error = require('./helpers/error');
+const fs = require('fs');
+const plugins = require('./helpers/plugins');
 
 var app = express();
 app.disable('etag');
