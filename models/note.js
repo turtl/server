@@ -214,6 +214,7 @@ var delete_note_file_sync = function(user_id, space_id, note_id) {
 var delete_note_file = function(user_id, note_id) {
 	return db.by_id('notes', note_id)
 		.tap(function(note) {
+			if(!note) throw error.promise_throw('missing_note');
 			return space_model.permissions_check(user_id, note.space_id, space_model.permissions.edit_note);
 		})
 		.tap(function(note) {
@@ -234,9 +235,8 @@ var delete_note_file = function(user_id, note_id) {
 					return sync_model.add_record(user_ids, user_id, 'note', note.id, 'edit');
 				});
 		})
-		.catch(error.promise_catch('missing_file'), function(err) {
-			return [];
-		});
+		.catch(error.promise_catch('missing_note'), function(err) { return []; })
+		.catch(error.promise_catch('missing_file'), function(err) { return []; });
 };
 
 sync_model.register('note', {
