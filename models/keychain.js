@@ -91,6 +91,7 @@ var edit = function(user_id, data) {
 var del = function(user_id, keychain_id) {
 	return get_by_id(keychain_id)
 		.then(function(item_data) {
+			if(!item_data) error.promise_throw('missing_keychain');
 			if(user_id != item_data.user_id) {
 				throw error.forbidden('you can\'t delete a keychain entry you don\'t own');
 			}
@@ -98,7 +99,8 @@ var del = function(user_id, keychain_id) {
 		})
 		.then(function(_) {
 			return sync_model.add_record([user_id], user_id, 'keychain', keychain_id, 'delete')
-		});
+		})
+		.catch(error.promise_catch('missing_keychain'), function() { return []; });
 };
 
 var link = function(ids) {
