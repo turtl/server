@@ -1,5 +1,7 @@
 # Turtl server
 
+_Opening an issue? See the [Turtl project tracker](https://github.com/turtl/project-tracker/issues)_
+
 This is the new Turtl server. It handles a number of things for Turtl clients:
 
 - Account management (join/login/delete)
