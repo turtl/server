@@ -620,6 +620,8 @@ exports.simple_move_space = function(sync_type, sync_table, perms_delete, perms_
 			})
 			.spread(function(cur_item_data, old_space_id, new_space_id, _can_delete, _can_add) {
 				cur_item_data.space_id = new_space_id;
+				// gotta update those keys or the whole sweater unravels
+				cur_item_data.keys = data.keys;
 				var update = {
 					space_id: new_space_id,
 					data: cur_item_data,
