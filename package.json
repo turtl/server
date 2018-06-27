@@ -5,7 +5,10 @@
   "author": "Andrew Lyon",
   "license": "AGPL-3.0",
   "repository": "https://github.com/turtl/server",
-  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "postinstall": "scripts/init.sh"
+  },
   "dependencies": {
     "aws-sdk": "2.9.0",
     "bluebird": "3.4.7",

@@ -3,7 +3,11 @@
 const log = require('./log');
 const yaml_env = require('yaml-env');
 
-var config = yaml_env.load('TURTL', __dirname+'/../config/config.yaml');
+var config_file = 'config.yaml';
+if(process.env['TURTL_CONFIG_FILE']) {
+	config_file = process.env['TURTL_CONFIG_FILE'];
+}
+var config = yaml_env.load('TURTL', __dirname+'/../config/'+config_file);
 if(process.env['TURTL_CONFIG_OVERRIDE']) {
 	try {
 		var override = JSON.parse(process.env['TURTL_CONFIG_OVERRIDE']);
