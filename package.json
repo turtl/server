@@ -6,8 +6,9 @@
   "license": "AGPL-3.0",
   "repository": "https://github.com/turtl/server",
   "scripts": {
+    "preinstall": "bash scripts/install-plugins.sh",
     "start": "node server.js",
-    "postinstall": "bash scripts/init.sh"
+    "postinstall": "bash scripts/init-db.sh"
   },
   "dependencies": {
     "aws-sdk": "2.9.0",
