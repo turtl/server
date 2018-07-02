@@ -38,6 +38,9 @@ if(db_url && db_url.match(/^postgres:/)) {
 		}
 	});
 }
+if(process.env['PORT']) {
+	config.server.port = parseInt(process.env['PORT']);
+}
 if(process.env['TURTL_CONFIG_OVERRIDE']) {
 	try {
 		var override = JSON.parse(process.env['TURTL_CONFIG_OVERRIDE']);
