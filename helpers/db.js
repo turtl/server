@@ -12,7 +12,11 @@ var log = require('./log');
 var util = require('./util');
 
 // create a connection string TAILORED TO YOUR SPECIFIC NEEDS
-var connection = 'postgres://'+config.db.user+(config.db.password ? ':'+config.db.password : '')+'@'+config.db.host+':'+config.db.port+'/'+config.db.database;
+if(config.db.connstr) {
+	var connection = config.db.connstr;
+} else {
+	var connection = 'postgres://'+config.db.user+(config.db.password ? ':'+config.db.password : '')+'@'+config.db.host+':'+config.db.port+'/'+config.db.database;
+}
 
 /**
  * clean db literal strings

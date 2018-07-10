@@ -3,11 +3,7 @@ server:
   port: 8181
 
 db:
-  host: '127.0.0.1'
-  port: 5432
-  database: 'turtl'
-  user: 'slappy'
-  password: 'floppy'
+  connstr: 'postgres://slappy:floppy@127.0.0.1:5432/turtl'
   pool: 24
 
 loglevel: 'debug'
