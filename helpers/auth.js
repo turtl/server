@@ -8,6 +8,7 @@ var public_routes = [
 	'post /users',
 	'get /users/confirm/[^/]+/[a-f0-9]+',
 	'post /cla/sign',
+	'get /health/[a-z0-9]+',
 ].map(function(pair) { return new RegExp('^'+pair+'$'); });
 
 module.exports = function(req, res, next) {

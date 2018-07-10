@@ -26,10 +26,10 @@ app.use(morgan(':remote-addr ":method :url" :status :res[content-length]', {
 
 // welcome route
 app.get('/', function(req, res) {
-	tres.send(res, {greeting: "тremendous notes. everyone says so."});
+	tres.send(res, {greeting: "Hi."});
 });
 
-['users', 'sync', 'spaces', 'files', 'feedback', 'errlog', 'cla', 'bookmarking']
+['users', 'sync', 'spaces', 'files', 'feedback', 'errlog', 'cla', 'bookmarking', 'health']
 	.forEach(function(con) {
 		// only load bookmarking controller if we REALLY specify we want it
 		if(con == 'bookmarking' && config.app.enable_bookmarker_proxy != 'I UNDERSTAND THIS VIOLATES THE PRIVACY OF MY USERS') {
