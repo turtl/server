@@ -6,3 +6,4 @@ npm-debug.log
 /plugins
 *.un~
 /play
+*.stackdump

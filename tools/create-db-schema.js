@@ -222,7 +222,10 @@ function run()
 			}
 		})
 		.then(function() { console.log('- done'); })
-		.catch(function(err) { console.error(err, err.stack); })
+		.catch(function(err) {
+			console.error(err, err.stack);
+			process.exit(1);
+		})
 		.finally(function() { setTimeout(process.exit, 100); });
 }
 
