@@ -129,7 +129,7 @@ exports.send = function(user_id, space_id, data) {
 			} else {
 				action = [
 					'To accept this invite, download Turtl (https://turtlapp.com/download/)',
-					'and create a new account using this email.',
+					'and create a new account using this email ('+to_user_email+').',
 					'\n\nIf you already have an existing account, you can ask '+name,
 					'to re-invite you on your existing email.',
 					'\n\nIf you don\'t care about any of this, feel free to',
