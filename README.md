@@ -14,10 +14,21 @@ processing can be used without forcing a particular method/service.
 
 ## Running the server
 
-The Turtl server requires a Postgres instance (>= 9.6) with a dedicated user/db
-set up for it.
+The Turtl server requires [Node](https://nodejs.org/) >= 8 and a [Postgres](https://www.postgresql.org/)
+instance (>= 9.6) with a dedicated user/db set up for it.
 
-Copy `config/config.yaml.default` to `config/config.yaml` and edit as needed.
+Once you have Node and Postgres set up, do the following:
+
+```sh
+mkdir turtl
+cd turtl
+git clone https://github.com/turtl/server
+cd server/
+npm install
+cp config/config.yaml.default config/config.yaml
+```
+
+Now edit `config/config.yaml` as needed.
 You'll want to main get your `db` settings correct, and `uploads`/`s3` sections
 configured. Also, be sure to change `app.secure_hash_salt` _(unless you're going
 to be running the integration tests against this server)_.
@@ -26,8 +37,8 @@ Now do:
 
 ```sh
 # create the plugin directory from config.yaml#plugins.plugin_location
-mkdir /path/to/plugin/dir
-node tools/create-db-schema.js
+mkdir /path/to/plugin/dir    # (usually just plugins/ in turtl/server/)
+./scripts/init-db.sh
 node server.js
 ```
 
