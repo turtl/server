@@ -254,6 +254,7 @@ exports.update = function(user_id, space_id, invite_id, data) {
 };
 
 exports.delete = function(user_id, space_id, invite_id, post_delete_fn) {
+	var invitee = null;
 	var promises = [
 		space_model.user_has_permission(user_id, space_id, space_model.permissions.delete_space_invite),
 		user_model.get_by_id(user_id)
@@ -263,12 +264,20 @@ exports.delete = function(user_id, space_id, invite_id, post_delete_fn) {
 			})
 			.then(function(invite) {
 				return invite && invite.id == invite_id;
-			})
+			}),
+		get_by_id(space_id, invite_id)
+			.then(function(invite) {
+				if(!invite) return false;
+				return user_model.get_by_email(invite.to_user)
+					.then(function(invitee_) {
+						invitee = invitee_;
+					});
+			}),
 	];
 	var is_invitee;
 	return Promise.all(promises)
-		.spread(function(has_perm, _is_invitee) {
-			is_invitee = _is_invitee;
+		.spread(function(has_perm, is_invitee_) {
+			is_invitee = is_invitee_;
 			if(!has_perm && !is_invitee) {
 				throw error.forbidden('you do not have access to delete that invite');
 			}
@@ -277,9 +286,13 @@ exports.delete = function(user_id, space_id, invite_id, post_delete_fn) {
 		.tap(function() {
 			return space_model.get_space_user_ids(space_id)
 				.then(function(user_ids) {
+					var user_ids_plus_invitee = user_ids.slice(0);
+					if(invitee && invitee.id) {
+						user_ids_plus_invitee.push(invitee.id);
+					}
 					return Promise.all([
 						sync_model.add_record(user_ids, user_id, 'space', space_id, 'edit'),
-						sync_model.add_record([user_id], user_id, 'invite', invite_id, 'delete'),
+						sync_model.add_record(user_ids_plus_invitee, user_id, 'invite', invite_id, 'delete'),
 					]);
 				});
 		})
