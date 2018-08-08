@@ -391,7 +391,7 @@ exports.bulk_sync = function(user_id, sync_records, client) {
 		sync_records = sync_records.slice(0, max_sync_records);
 	}
 	var breakdown = {};
-	sync_records.forEach(function(rec) {
+	sync_records.forEach(function(sync) {
 		var key = sync.type+'.'+sync.action;
 		if(!breakdown[key]) breakdown[key] = 0;
 		breakdown[key]++;
