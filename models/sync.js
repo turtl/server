@@ -390,6 +390,13 @@ exports.bulk_sync = function(user_id, sync_records, client) {
 	if(max_sync_records) {
 		sync_records = sync_records.slice(0, max_sync_records);
 	}
+	var breakdown = {};
+	sync_records.forEach(function(rec) {
+		var key = sync.type+'.'+sync.action;
+		if(!breakdown[key]) breakdown[key] = 0;
+		breakdown[key]++;
+	});
+	log.info('sync.bulk_sync() -- user '+user_id+' syncing '+sync_records.length+' items: ', breakdown);
 
 	// assign each sync item a unique id so we can track successes vs failures
 	sync_records.forEach(function(sync, i) { sync._id = i + 1; });
