@@ -375,7 +375,7 @@ exports.set_owner = function(user_id, space_id, new_user_id) {
 var add = function(user_id, data) {
 	data.user_id = user_id;
 	data = vlad.validate('space', data);
-	return db.upsert('spaces', {id: data.id, data: data}, 'id')
+	return db.insert('spaces', {id: data.id, data: data})
 		.tap(function(space) {
 			return exports.create_space_user_record(space.id, user_id, roles.owner);
 		})
@@ -513,7 +513,7 @@ exports.simple_add = function(sync_type, sync_table, sync_permission, make_item_
 		var space_id = data.space_id;
 		return exports.permissions_check(user_id, space_id, sync_permission)
 			.then(function(_) {
-				return db.upsert(sync_table, make_item_fn(data), 'id');
+				return db.insert(sync_table, make_item_fn(data));
 			})
 			.tap(function(item) {
 				return exports.get_space_user_ids(space_id)
