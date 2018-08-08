@@ -94,6 +94,7 @@ exports.check_auth = function(authinfo) {
 	return db.first('SELECT * FROM users WHERE username = {{username}}', {username: username})
 		.then(function(user) {
 			if(!user) throw error.forbidden('bad login');
+			if(!user.active) throw error.forbidden('user inactive');
 			if(!secure_compare(user.auth, auth_hash(auth))) throw error.forbidden('bad login');
 			return clean_user(user);
 		});
@@ -120,6 +121,7 @@ exports.join = function(userdata) {
 			return db.insert('users', {
 				username: userdata.username,
 				auth: auth,
+				active: true,
 				confirmed: false,
 				confirmation_token: token,
 				data: db.json(data),

@@ -28,7 +28,9 @@ exports.err = function(res, err, options) {
 	var errobj = {
 		error: {message: err.message}
 	};
-	log.error('tres.err -- (uid '+res.req.user.id+'):', status == 500 ? err : err.message);
+	var uid = null;
+	try { uid = res.req.user.id; } catch(_) {}
+	log.error('tres.err -- (uid '+uid+'):', status == 500 ? err : err.message);
 	return res.status(status).send(JSON.stringify(errobj));
 };
 

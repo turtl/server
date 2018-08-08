@@ -192,6 +192,7 @@ builder.table('users', {
 		id: ty.pk_int,
 		username: builder.not_null(ty.text),
 		auth: builder.not_null(ty.text),
+		active: builder.not_null(ty.bool),
 		confirmed: builder.not_null(ty.bool),
 		confirmation_token: ty.text,
 		data: ty.json,
