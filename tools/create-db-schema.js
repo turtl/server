@@ -214,7 +214,7 @@ function run()
 		.then(function(schema_ver) {
 			if(!schema_ver) {
 				// no record? just insert it with the current version.
-				return db.insert('app', {id: 'schema-version', val: schema_version});
+				return db.upsert('app', {id: 'schema-version', val: schema_version}, 'id');
 			} else if(parseInt(schema_ver.val) < schema_version) {
 				// run an upgrayyyyd
 				var from = parseInt(schema_ver.val);
