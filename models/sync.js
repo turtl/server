@@ -405,8 +405,10 @@ exports.bulk_sync = function(user_id, sync_records, client) {
 	var successes = [];
 	return Promise.each(sync_records, function(sync) {
 		var sync_client_id = sync.id;
+		log.debug('sync.bulk_sync() -- sync item start: ', sync_client_id, sync.action, sync.type);
 		return process_incoming_sync(user_id, sync)
 			.tap(function(item) {
+				log.debug('sync.bulk_sync() -- sync item done: ', sync_client_id);
 				var sync_ids = item.sync_ids;
 				delete item.sync_ids;
 				successes.push({
@@ -431,6 +433,7 @@ exports.bulk_sync = function(user_id, sync_records, client) {
 				throw err;
 			});
 	}).then(function() {
+		log.debug('sync.bulk_sync() -- sync complete');
 		return {
 			// return all successful syncs
 			success: successes,
