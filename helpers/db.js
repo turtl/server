@@ -5,11 +5,11 @@
  * postgres. note that the upsert function *requires* postgres >= 9.5.
  */
 
-var config = require('./config');
-var pg = require('pg');
-var Promise = require('bluebird');
-var log = require('./log');
-var util = require('./util');
+const config = require('./config');
+const pg = require('pg');
+const Promise = require('bluebird');
+const log = require('./log');
+const util = require('./util');
 
 // create a connection string TAILORED TO YOUR SPECIFIC NEEDS
 if(config.db.connstr) {
@@ -17,6 +17,11 @@ if(config.db.connstr) {
 } else {
 	var connection = 'postgres://'+config.db.user+(config.db.password ? ':'+config.db.password : '')+'@'+config.db.host+':'+config.db.port+'/'+config.db.database;
 }
+
+const pool = new pg.Pool({connectionString: connection});
+pool.on('error', function(err, client) {
+	log.error('pg.Pool() -- ', err);
+});
 
 /**
  * clean db literal strings
@@ -105,7 +110,7 @@ var make_client = function(client, release) {
 
 exports.client = function() {
 	return new Promise(function(resolve, reject) {
-		pg.connect(connection, function(err, client, release) {
+		pool.connect(function(err, client, release) {
 			if(err) return reject(err);
 			resolve(make_client(client, release));
 		});

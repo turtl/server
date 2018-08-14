@@ -7,8 +7,7 @@
   "repository": "https://github.com/turtl/server",
   "scripts": {
     "preinstall": "bash scripts/install-plugins.sh",
-    "start": "node server.js",
-    "postinstall": "bash scripts/init-db.sh"
+    "start": "node server.js"
   },
   "dependencies": {
     "aws-sdk": "2.9.0",
@@ -17,7 +16,7 @@
     "express": "4.14.0",
     "method-override": "2.3.10",
     "morgan": "1.7.0",
-    "pg": "6.1.6",
+    "pg": "7.4.3",
     "request": "2.81.0",
     "s3-upload-stream": "1.0.7",
     "turtl-lib-permissions": "git+https://github.com/turtl/lib-permissions.git#master",
