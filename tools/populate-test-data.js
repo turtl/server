@@ -39,6 +39,7 @@ test_queries.push('INSERT INTO notes (id, space_id, board_id, data, created, upd
 
 function run() {
 	console.log('- creating test data');
+	var errcode = 0;
 	return Promise.map(test_queries, function(qry) {
 		return db.query(qry);
 	}, {concurrency: 1})
@@ -46,8 +47,11 @@ function run() {
 			return create_test_file();
 		})
 		.then(function() { console.log('- done'); })
-		.catch(function(err) { console.error(err, err.stack); })
-		.finally(function() { setTimeout(process.exit, 100); });
+		.catch(function(err) {
+			console.error(err, err.stack);
+			errcode = 1;
+		})
+		.finally(function() { setTimeout(process.exit.bind(process, errcode), 100); });
 }
 
 run();
