@@ -84,7 +84,7 @@ var auth_hash = function(authkey) {
 };
 
 exports.check_auth = function(authinfo) {
-	if(!authinfo) return Promise.reject(error.forbidden('bad login'));
+	if(!authinfo) return Promise.reject(error.forbidden('bad login: (bad auth)'));
 	var base64_auth = authinfo.replace(/^Basic */, '');
 	var parsed = new Buffer(base64_auth, 'base64').toString("ascii");
 	var auth_parts = parsed.split(':');
@@ -93,7 +93,7 @@ exports.check_auth = function(authinfo) {
 
 	return db.first('SELECT * FROM users WHERE username = {{username}}', {username: username})
 		.then(function(user) {
-			if(!user) throw error.forbidden('bad login');
+			if(!user) throw error.forbidden('bad login: '+username);
 			if(!user.active) throw error.forbidden('user inactive');
 			if(!secure_compare(user.auth, auth_hash(auth))) throw error.forbidden('bad login');
 			return clean_user(user);

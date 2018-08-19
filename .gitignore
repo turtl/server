@@ -7,4 +7,4 @@ npm-debug.log
 *.un~
 /play
 *.stackdump
-/scripts/deploy
+/scripts/grim
