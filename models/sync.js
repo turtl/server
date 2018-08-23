@@ -430,7 +430,6 @@ exports.bulk_sync = function(user_id, sync_records, client) {
 				// store the errmsg in the sync item itself, which will be
 				// returned to the client.
 				sync.error = {code: err.status || 500, msg: err.message};
-				throw err;
 			});
 	}).then(function() {
 		log.debug('sync.bulk_sync() -- sync complete');
