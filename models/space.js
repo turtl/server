@@ -422,11 +422,15 @@ var del = function(user_id, space_id) {
 	// some function defined below here, and i'm certainly not going to put the
 	// requires at the bottom of the file just to support this one function.
 	// -------------------------------------------------------------------------
-	var board_model = require('./board');
-	var note_model = require('./note');
+	const board_model = require('./board');
+	const note_model = require('./note');
 	// -------------------------------------------------------------------------
 	var affected_users = null;
-	return exports.permissions_check(user_id, space_id, permissions.delete_space)
+	return get_by_id(space_id, {raw: true})
+		.then(function(space_exists) {
+			if(!space_exists) error.promise_throw('space_missing');
+			return exports.permissions_check(user_id, space_id, permissions.delete_space);
+		})
 		.tap(function() {
 			return exports.get_space_user_ids(space_id)
 				.then(function(user_ids) { affected_users = user_ids; });
@@ -487,6 +491,10 @@ var del = function(user_id, space_id) {
 		})
 		.then(function() {
 			return sync_model.add_record(affected_users, user_id, 'space', space_id, 'delete')
+		})
+		.catch(error.promise_catch('space_missing'), function() {
+			// silently ignore deleting something that doesn't exist.
+			return [];
 		});
 };
 exports.delete_space = del;
