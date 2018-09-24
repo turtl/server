@@ -26,9 +26,11 @@ exports.route = function(app) {
  * to add/remove the correct data or the app is going to have a bad time.
  */
 var partial_sync = function(req, res) {
-	var user_id = req.user.id;
-	var sync_id = parseInt(req.query.sync_id);
+	const user_id = req.user.id;
+	const sync_id = parseInt(req.query.sync_id);
+	const type = req.query.type;
 	var immediate = req.query.immediate == '1';
+	if(type) immediate = (type != 'poll');
 	return model.sync_from(user_id, sync_id, !immediate)
 		.spread(function(sync_records, latest_sync_id) {
 			tres.send(res, {records: sync_records, sync_id: latest_sync_id});
