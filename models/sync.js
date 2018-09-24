@@ -318,11 +318,7 @@ exports.sync_from = function(user_id, from_sync_id, poll) {
 	if(!from_sync_id && from_sync_id !== 0) {
 		return Promise.reject(error.bad_request('missing `sync_id` var: '+JSON.stringify(from_sync_id)));
 	}
-	// after some testing, 15s seems to be about the max that various clients
-	// will support. which is funny, because we control the clients. but they do
-	// not do as they are asked. they do as they please (mainly talknig about
-	// the core, which has a 90s timeout for this call).
-	var cutoff = (new Date().getTime()) + (1000 * 15);
+	var cutoff = (new Date().getTime()) + (1000 * 20);
 	return poll_sync_items(user_id, from_sync_id, poll, cutoff)
 		.then(function(sync_records) {
 			return link_sync_records(sync_records);
