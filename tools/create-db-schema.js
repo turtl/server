@@ -10,10 +10,21 @@ var db = require('../helpers/db');
 var config = require('../helpers/config');
 var Promise = require('bluebird');
 
-var schema_version = 1;
+var schema_version = 2;
 
 var run_upgrade = function(from_version, to_version) {
-	// TODO? or just get it right the first time...
+	var cur_version = from_version;
+	var promises = [];
+	const run = function(qry, params) {
+		promises.push(db.query(qry, params));
+	};
+
+	if(cur_version == 1) {
+		run("ALTER TABLE users ADD COLUMN last_login TIMESTAMP DEFAULT NULL");
+		cur_version++;
+	}
+
+	return Promise.all(promises);
 };
 
 var schema = [];
@@ -219,7 +230,10 @@ function run()
 				// run an upgrayyyyd
 				var from = parseInt(schema_ver.val);
 				var to = schema_version;
-				return run_upgrade(from, to);
+				return run_upgrade(from, to)
+					.then(function() {
+						return db.upsert('app', {id: 'schema-version', val: schema_version}, 'id');
+					});
 			}
 		})
 		.then(function() { console.log('- done'); })

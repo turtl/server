@@ -53,7 +53,9 @@ var get_by_email = function(req, res) {
  * a basic endpoint specifically for authentication
  */
 var authenticate = function(req, res) {
-	return tres.send(res, req.user.id);
+	var promise = model.update_last_login(req.user.id)
+		.then(function() { return req.user.id; });
+	tres.wrap(res, promise);
 };
 
 var confirm_user = function(req, res) {

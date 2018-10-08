@@ -125,6 +125,7 @@ exports.join = function(userdata) {
 				confirmed: false,
 				confirmation_token: token,
 				data: db.json(data),
+				last_login: db.literal('now()'),
 			});
 		})
 		.tap(function(user) {
@@ -415,6 +416,10 @@ exports.get_by_email = function(email, options) {
 			}
 			return clean_user(user);
 		});
+};
+
+exports.update_last_login = function(user_id) {
+	return db.query('UPDATE users SET last_login = NOW() WHERE id = {{user_id}}', {user_id: user_id});
 };
 
 exports.get_by_emails = function(emails) {
