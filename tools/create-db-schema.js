@@ -6,13 +6,13 @@
  * excessively limiting and hard to change later on.
  */
 
-var db = require('../helpers/db');
-var config = require('../helpers/config');
-var Promise = require('bluebird');
+const db = require('../helpers/db');
+const config = require('../helpers/config');
+const Promise = require('bluebird');
 
-var schema_version = 2;
+const schema_version = 2;
 
-var run_upgrade = function(from_version, to_version) {
+const run_upgrade = function(from_version, to_version) {
 	var cur_version = from_version;
 	var promises = [];
 	const run = function(qry, params) {
@@ -28,7 +28,7 @@ var run_upgrade = function(from_version, to_version) {
 };
 
 var schema = [];
-var builder = {
+const builder = {
 	type: {
 		pk_int: 'bigserial primary key',
 		pk: 'varchar(96) primary key',
@@ -82,7 +82,7 @@ var builder = {
 	},
 };
 
-var ty = builder.type;
+const ty = builder.type;
 
 builder.table('app', {
 	fields: {
@@ -215,8 +215,7 @@ builder.table('users', {
 	],
 });
 
-function run()
-{
+function run() {
 	console.log('- running DB schema');
 	return Promise.each(schema, function(qry) { return db.query(qry); })
 		.then(function() {
@@ -230,8 +229,10 @@ function run()
 				// run an upgrayyyyd
 				var from = parseInt(schema_ver.val);
 				var to = schema_version;
+				console.log('- upgrading schema from v'+from+' to v'+to+'...');
 				return run_upgrade(from, to)
 					.then(function() {
+						console.log('- schema upgraded to v'+to+'!');
 						return db.upsert('app', {id: 'schema-version', val: schema_version}, 'id');
 					});
 			}
