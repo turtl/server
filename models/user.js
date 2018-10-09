@@ -86,7 +86,7 @@ var auth_hash = function(authkey) {
 exports.check_auth = function(authinfo) {
 	if(!authinfo) return Promise.reject(error.forbidden('bad login: (bad auth)'));
 	var base64_auth = authinfo.replace(/^Basic */, '');
-	var parsed = new Buffer(base64_auth, 'base64').toString("ascii");
+	var parsed = new Buffer(base64_auth, 'base64').toString('utf8');
 	var auth_parts = parsed.split(':');
 	var username = auth_parts[0];
 	var auth = auth_parts[1];
