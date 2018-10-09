@@ -20,7 +20,7 @@ const run_upgrade = function(from_version, to_version) {
 	};
 
 	if(cur_version == 1) {
-		run("ALTER TABLE users ADD COLUMN last_login timestamp with timezone DEFAULT NULL");
+		run("ALTER TABLE users ADD COLUMN last_login timestamp with time zone DEFAULT NULL");
 		cur_version++;
 	}
 
@@ -37,7 +37,7 @@ const builder = {
 		id: 'varchar(96)',
 		int: 'integer',
 		json: 'jsonb',
-		date: 'timestamp with timezone',
+		date: 'timestamp with time zone',
 		varchar: function(chars) { return 'varchar('+chars+')'; },
 		text: 'text',
 		bool: 'boolean',
