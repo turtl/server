@@ -20,7 +20,7 @@ const run_upgrade = function(from_version, to_version) {
 	};
 
 	if(cur_version == 1) {
-		run("ALTER TABLE users ADD COLUMN last_login TIMESTAMP DEFAULT NULL");
+		run("ALTER TABLE users ADD COLUMN last_login timestamp with timezone DEFAULT NULL");
 		cur_version++;
 	}
 
@@ -28,6 +28,7 @@ const run_upgrade = function(from_version, to_version) {
 };
 
 var schema = [];
+var indexes = [];
 const builder = {
 	type: {
 		pk_int: 'bigserial primary key',
@@ -36,7 +37,7 @@ const builder = {
 		id: 'varchar(96)',
 		int: 'integer',
 		json: 'jsonb',
-		date: 'timestamp',
+		date: 'timestamp with timezone',
 		varchar: function(chars) { return 'varchar('+chars+')'; },
 		text: 'text',
 		bool: 'boolean',
@@ -46,7 +47,7 @@ const builder = {
 
 	table: function(table_name, options) {
 		var fields = options.fields;
-		var indexes = options.indexes;
+		var table_indexes = options.indexes;
 
 		fields.created = builder.type.date+' default CURRENT_TIMESTAMP';
 		fields.updated = builder.type.date+' default CURRENT_TIMESTAMP';
@@ -69,10 +70,10 @@ const builder = {
 			}),
 			')',
 		].join(' '));
-		if(indexes && indexes.length) {
-			indexes.forEach(function(index) {
+		if(table_indexes && table_indexes.length) {
+			table_indexes.forEach(function(index) {
 				var name = index.name || index.fields.join('_');
-				schema.push([
+				indexes.push([
 					'create index if not exists '+table_name+'_'+name+' on '+table_name+' (',
 					index.fields.join(','),
 					')',
@@ -207,11 +208,11 @@ builder.table('users', {
 		confirmed: builder.not_null(ty.bool),
 		confirmation_token: ty.text,
 		data: ty.json,
+		last_login: ty.date,
 	},
 	indexes: [
-		// NOTE: no `auth` index...pull out by username, do double-hmac compare
-		// on auth
 		{name: 'username', fields: ['username'], unique: true},
+		{name: 'last_login', fields: ['last_login']},
 	],
 });
 
@@ -236,6 +237,10 @@ function run() {
 						return db.upsert('app', {id: 'schema-version', val: schema_version}, 'id');
 					});
 			}
+		})
+		.then(function() {
+			console.log('- creating indexes');
+			return Promise.each(indexes, function(qry) { return db.query(qry); })
 		})
 		.then(function() { console.log('- done'); })
 		.catch(function(err) {
