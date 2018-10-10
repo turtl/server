@@ -1,5 +1,8 @@
 ---
 server:
+  # Per default, turtl will listen on all IP addresses
+  # You can choose the IP it will use with this parameter
+  host:
   port: 8181
 
 db:
