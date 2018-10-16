@@ -261,6 +261,11 @@ var populate_shares = function(user_id, sync_records) {
 							var sync = convert_to_sync(item, 'note', action);
 							populated.push(sync);
 						});
+						notes.forEach(function(item) {
+							if(!item.has_file) return;
+							var sync = convert_to_sync(item, 'file', action);
+							populated.push(sync);
+						});
 					} else {
 						// ah ah! alex, remember what we talked about? mmhmm
 						// thank you. shutup. thank you.
