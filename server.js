@@ -57,6 +57,10 @@ plugin_list.forEach(function(plugin) {
 	loader.load(plugins.register.bind(plugins, plugin), plugin_config);
 });
 
-app.listen(config.server.port);
-log.info('Listening for turtls on port '+config.server.port+'...');
-
+if (config.server.host) {
+	app.listen(config.server.port, config.server.host);
+	log.info('Listening for turtls on IP '+config.server.host+', port '+config.server.port+'...');
+} else {
+	app.listen(config.server.port);
+	log.info('Listening for turtls on port '+config.server.port+'...');
+}
