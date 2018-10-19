@@ -86,7 +86,11 @@ exports.send = function(user_id, space_id, data) {
 	if(space_id != data.space_id) return Promise.reject(error.bad_request('space_id passed does not match space_id in data'));
 
 	var to_user_email = data.to_user;
-	return space_model.permissions_check(user_id, space_id, space_model.permissions.add_space_invite)
+	return user_model.get_by_id(user_id)
+		.then(function(user) {
+			if(!user.confirmed) throw error.forbidden('you must confirm your account to send invites');
+			return space_model.permissions_check(user_id, space_id, space_model.permissions.add_space_invite)
+		})
 		.then(function() {
 			return Promise.all([
 				invite_exists(space_id, to_user_email),
