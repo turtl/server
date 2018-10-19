@@ -469,6 +469,13 @@ var del = function(user_id, space_id) {
 				});
 		})
 		.then(function() {
+			// build/save sync records for all our deleted members
+			return exports.get_space_user_ids(space_id)
+				.then(function(space_user_ids) {
+					return sync_model.add_record(space_user_ids, user_id, 'space', space_id, 'unshare');
+				});
+		})
+		.then(function() {
 			var params = {space_id: space_id};
 			return Promise.all([
 				db.query('DELETE FROM spaces_users WHERE space_id = {{space_id}}', params),
