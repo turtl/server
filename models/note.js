@@ -31,6 +31,7 @@ var get_by_id = function(note_id) {
 	return db.by_id('notes', note_id)
 		.then(function(note) { return note && note.data; });
 };
+exports.get_by_id = get_by_id;
 
 exports.get_by_spaces = function(space_ids) {
 	if(space_ids.length == 0) return Promise.resolve([]);
