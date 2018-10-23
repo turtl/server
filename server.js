@@ -29,6 +29,7 @@ app.get('/', function(req, res) {
 	tres.send(res, {greeting: "Hi."});
 });
 
+// load controllers
 ['users', 'sync', 'spaces', 'files', 'feedback', 'errlog', 'cla', 'bookmarking', 'health']
 	.forEach(function(con) {
 		// only load bookmarking controller if we REALLY specify we want it
@@ -40,6 +41,7 @@ app.get('/', function(req, res) {
 		controller.route(app);
 	});
 
+// load plugins
 try {
 	var plugin_dir = config.plugins.plugin_location || './plugins'
 	var plugin_list = fs.readdirSync(plugin_dir);

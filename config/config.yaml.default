@@ -38,7 +38,7 @@ plugins:
     enabled: false
   email:
     enabled: false
-  premium:
+  sync:
     enabled: false
 
 uploads:

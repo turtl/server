@@ -1,12 +1,13 @@
 "use strict";
 
-var Promise = require('bluebird');
-var db = require('../helpers/db');
-var error = require('../helpers/error');
-var analytics = require('./analytics');
-var util = require('../helpers/util');
-var log = require('../helpers/log');
-var config = require('../helpers/config');
+const Promise = require('bluebird');
+const db = require('../helpers/db');
+const error = require('../helpers/error');
+const analytics = require('./analytics');
+const util = require('../helpers/util');
+const log = require('../helpers/log');
+const config = require('../helpers/config');
+const plugins = require('../helpers/plugins');
 
 // holds our sync mappings. models will register themselves to the sync system
 // via the `register()` call
@@ -356,19 +357,27 @@ var process_incoming_sync = function(user_id, sync) {
 		var allowed_actions = Object.keys(sync_type_handler).join(', ');
 		return Promise.reject(error.bad_request('Missing sync handler for type `'+sync.type+'.'+sync.action+'` (allowed actions for '+sync.type+': ['+allowed_actions+'])'));
 	}
-	var handler = sync_type_handler[sync.action];
-	var handler_data = null;
-	if(sync.action == 'delete' && !sync_type_handler.skip_standard_delete) {
-		handler_data = item.id;
-	} else {
-		handler_data = sync.data;
-	}
-	try {
-		var promise = handler(user_id, handler_data);
-	} catch(err) {
-		return Promise.reject(err);
-	}
-	return promise
+
+	// run the sync item through the sync plugin for ......processing
+	var sync_plugin_promise = plugins.with('sync', function(syncer) {
+		return syncer.sync(user_id, sync);
+	}, Promise.resolve.bind(Promise));
+	return sync_plugin_promise
+		.then(function(_sync) {
+			var handler = sync_type_handler[sync.action];
+			var handler_data = null;
+			if(sync.action == 'delete' && !sync_type_handler.skip_standard_delete) {
+				handler_data = item.id;
+			} else {
+				handler_data = sync.data;
+			}
+			try {
+				var promise = handler(user_id, handler_data);
+			} catch(err) {
+				return Promise.reject(err);
+			}
+			return promise;
+		})
 		.then(function(item_data) {
 			if(sync.action == 'delete' && !sync_type_handler.skip_standard_delete) {
 				// return a standard "delete" item (unless the handler says
