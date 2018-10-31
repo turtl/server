@@ -22,6 +22,7 @@ app:
     info: 'Turtl <info@turtlapp.com>'
     invites: 'invites@turtlapp.com'
   secure_hash_salt: "Plaque is a figment of the liberal media and the dental industry to scare you into buying useless appliances and pastes. Now, I've read the arguments on both sides and I haven't found any evidence yet to support the need to brush your teeth. Ever."
+  allow_unconfirmed_invites: true
 
 sync:
   # how many sync records can a client send at a time? it's a good idea to have
