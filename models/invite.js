@@ -88,7 +88,9 @@ exports.send = function(user_id, space_id, data) {
 	var to_user_email = data.to_user;
 	return user_model.get_by_id(user_id)
 		.then(function(user) {
-			if(!user.confirmed) throw error.forbidden('you must confirm your account to send invites');
+			if(!user.confirmed && !config.app.allow_unconfirmed_invites) {
+				throw error.forbidden('you must confirm your account to send invites');
+			}
 			return space_model.permissions_check(user_id, space_id, space_model.permissions.add_space_invite)
 		})
 		.then(function() {

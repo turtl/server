@@ -26,6 +26,10 @@ app:
   # you had, or the short story you came up with during your creative writing
   # class in your freshmen year of college. have fun with it.
   secure_hash_salt: "Plaque is a figment of the liberal media and the dental industry to scare you into buying useless appliances and pastes. Now, I've read the arguments on both sides and I haven't found any evidence yet to support the need to brush your teeth. Ever."
+  # set to true if you think it's ok to SEND invites if you have not confirmed
+  # your account. great for testing, not so great for production. but what do
+  # i know...
+  allow_unconfirmed_invites: false
 
 sync:
   # how many sync records can a client send at a time? it's a good idea to have
