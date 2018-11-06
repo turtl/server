@@ -22,7 +22,7 @@ app.use(body_parser.urlencoded({extended: true, limit: '4mb'}));
 app.use(morgan(':remote-addr ":method :url" :status :res[content-length]', {
 	stream: { write: function(message, _enc) { log.info(message.slice(0, -1)); } }
 }));
-app.use(turtl_auth);
+app.use(turtl_auth.verify);
 
 // welcome route
 app.get('/', function(req, res) {
@@ -56,7 +56,10 @@ plugin_list.forEach(function(plugin) {
 	log.info('Loading plugin: '+plugin);
 	var loader = require(plugin_dir+'/'+plugin+'/main.js');
 	var plugin_config = config.plugins[plugin];
-	loader.load(plugins.register.bind(plugins, plugin), plugin_config);
+	loader.load(plugins.register.bind(plugins, plugin), plugin_config, {
+		app: app,
+		auth: turtl_auth,
+	});
 });
 
 if (config.server.host) {

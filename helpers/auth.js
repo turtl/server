@@ -3,15 +3,21 @@
 var user_model = require('../models/user');
 var tres = require('./tres');
 
-var public_routes = [
+function add_public_route(routespec) {
+	public_routes.push(new RegExp('^'+routespec+'$'));
+};
+exports.add_public_route = add_public_route;
+
+var public_routes = [];
+[
 	'get /',
 	'post /users',
 	'get /users/confirm/[^/]+/[a-f0-9]+',
 	'post /cla/sign',
 	'get /health/[a-z0-9]+',
-].map(function(pair) { return new RegExp('^'+pair+'$'); });
+].map(add_public_route);
 
-module.exports = function(req, res, next) {
+exports.verify = function(req, res, next) {
 	if(req.method == 'OPTIONS') return next();
 	var auth = req.headers.authorization;
 	// see if we have a public route
