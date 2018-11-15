@@ -38,12 +38,13 @@ sync:
 
 plugins:
   plugin_location: '/var/www/turtl/server/plugins'
-  analytics:
-    enabled: false
+  # each key here corresponds to a folder name in the plugins folder, so `email`
+  # below would be a plugin at /var/www/turtl/server/plugins/email (see the
+  # example-plugins/ folder for an email plugin you can use)
   email:
     enabled: false
-  sync:
-    enabled: false
+    endpoint: 'smtps://user:password@smtp.gmail.com/?pool=true'
+    defaults: {}
 
 uploads:
   # if set to a path, files will be uploaded to the local filesystem instead of

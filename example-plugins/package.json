@@ -1,0 +1,12 @@
+{
+  "name": "turtl-server-plugins",
+  "version": "0.1.0",
+  "description": "PLUGINS FOR Turtl's node-based API server",
+  "author": "Andrew Lyon",
+  "license": "AGPL-3.0",
+  "repository": "https://github.com/turtl/server",
+  "dependencies": {
+    "bluebird": "3.4.7",
+    "nodemailer": "4.6.8"
+  }
+}
