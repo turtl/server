@@ -10,7 +10,7 @@ const db = require('../helpers/db');
 const config = require('../helpers/config');
 const Promise = require('bluebird');
 
-const schema_version = 2;
+const schema_version = 3;
 
 const run_upgrade = function(from_version, to_version) {
 	var cur_version = from_version;
@@ -21,6 +21,11 @@ const run_upgrade = function(from_version, to_version) {
 
 	if(cur_version == 1) {
 		run("ALTER TABLE users ADD COLUMN last_login timestamp with time zone DEFAULT NULL");
+		cur_version++;
+	}
+
+	if(cur_version == 2) {
+		run("DROP INDEX spaces_users_user_id");
 		cur_version++;
 	}
 
@@ -174,7 +179,8 @@ builder.table('spaces_users', {
 		role: builder.not_null(ty.varchar(24)),
 	},
 	indexes: [
-		{name: 'user_id', fields: ['space_id', 'user_id']},
+		{name: 'user_id_space_id', fields: ['user_id', 'space_id']},
+		{name: 'space_id', fields: ['space_id']},
 	],
 });
 
