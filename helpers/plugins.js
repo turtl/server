@@ -1,4 +1,4 @@
-var plugins = {};
+const plugins = {};
 
 exports.register = function(name, spec) {
 	plugins[name] = spec;
