@@ -48,6 +48,7 @@ var secure_compare = function(secret1, secret2) {
 	var hmac2 = crypto.createHmac('sha256', key).update(secret2).digest('base64');
 	return hmac1 == hmac2;
 };
+exports.secure_compare = secure_compare;
 
 /**
  * create a random token. useful for creating values the server knows that users
