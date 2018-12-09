@@ -59,6 +59,7 @@ plugin_list.forEach(function(plugin) {
 	loader.load(plugins.register.bind(plugins, plugin), plugin_config, {
 		app: app,
 		auth: turtl_auth,
+		plugins: plugins,
 	});
 });
 
