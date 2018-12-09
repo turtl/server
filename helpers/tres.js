@@ -28,6 +28,7 @@ exports.err = function(res, err, options) {
 	var errobj = {
 		error: {message: err.message}
 	};
+	if(err.extra) errobj.error.extra = err.extra;
 	var uid = null;
 	try { uid = res.req.user.id; } catch(_) {}
 	log.error('tres.err -- (uid '+uid+'):', status == 500 ? err : err.message);

@@ -1,10 +1,11 @@
 "use strict";
 
 var make_err_fn = function(status) {
-	return function(msg) {
+	return function(msg, extra) {
 		var err = new Error(msg);
 		err.status = status;
 		err.app_error = true;
+		err.extra = extra || false;
 		return err;
 	};
 };
