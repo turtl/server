@@ -12,6 +12,7 @@ var crypto = require('crypto');
 var email_model = require('./email');
 var analytics = require('./analytics');
 var util = require('../helpers/util');
+const plugins = require('../helpers/plugins');
 
 vlad.define('invite', {
 	id: {type: vlad.type.client_id, required: true},
@@ -92,6 +93,11 @@ exports.send = function(user_id, space_id, data) {
 				throw error.forbidden('you must confirm your account to send invites');
 			}
 			return space_model.permissions_check(user_id, space_id, space_model.permissions.add_space_invite)
+		})
+		.then(function() {
+			return plugins.with('sync', function(syncer) {
+				return syncer.can_invite(space_id);
+			}, Promise.resolve.bind(Promise));
 		})
 		.then(function() {
 			return Promise.all([
