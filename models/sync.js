@@ -335,10 +335,14 @@ exports.sync_from = function(user_id, from_sync_id, poll) {
 					return clean_sync_records(sync_records);
 				})
 				.then(function(sync_records) {
-					return [
-						sync_records,
-						latest_sync_id || from_sync_id,
-					];
+					return plugins.with('sync', function(syncer) { return syncer.sync_meta(user_id); })
+						.then(function(sync_meta) {
+							return [
+								sync_records,
+								latest_sync_id || from_sync_id,
+								sync_meta,
+							];
+						});
 				});
 		});
 };
@@ -360,7 +364,7 @@ var process_incoming_sync = function(user_id, sync) {
 
 	// run the sync item through the sync plugin for ......processing
 	var sync_plugin_promise = plugins.with('sync', function(syncer) {
-		return syncer.sync(user_id, sync);
+		return syncer.sync_item(user_id, sync);
 	}, Promise.resolve.bind(Promise));
 	return sync_plugin_promise
 		.then(function(_sync) {
@@ -447,20 +451,25 @@ exports.bulk_sync = function(user_id, sync_records, client) {
 			});
 	}).then(function() {
 		log.debug('sync.bulk_sync() -- sync complete');
-		return {
-			// return all successful syncs
-			success: successes,
-			// return all failed syncs
-			failures: sync_records.filter(function(sync) {
-				return !success_idx[sync._id] && sync.error;
-			}),
-			// return all syncs that cannot continue because they are blocked by
-			// a failure (remember, syncs process one after the other...if one
-			// fails, the rest of the chain cannot continue)
-			blocked: sync_records.filter(function(sync) {
-				return !success_idx[sync._id] && !sync.error;
-			}),
-		};
+		return plugins.with('sync', function(syncer) { return syncer.sync_meta(user_id); })
+			.then(function(plugin_data) {
+				return {
+					// return all successful syncs
+					success: successes,
+					// return all failed syncs
+					failures: sync_records.filter(function(sync) {
+						return !success_idx[sync._id] && sync.error;
+					}),
+					// return all syncs that cannot continue because they are blocked by
+					// a failure (remember, syncs process one after the other...if one
+					// fails, the rest of the chain cannot continue)
+					blocked: sync_records.filter(function(sync) {
+						return !success_idx[sync._id] && !sync.error;
+					}),
+					// return the sync plugin extra data
+					extra: plugin_data,
+				};
+			});
 	});
 };
 
@@ -524,10 +533,14 @@ exports.full_sync = function(user_id) {
 				.then(function(rec) { return rec.sync_id; });
 		})
 		.then(function(sync_id) {
-			return {
-				sync_id: sync_id || 0,
-				records: sync_records.map(function(s) {s.id = 0; return s;}),
-			};
+			return plugins.with('sync', function(syncer) { return syncer.sync_meta(user_id); })
+				.then(function(sync_meta) {
+					return {
+						sync_id: sync_id || 0,
+						records: sync_records.map(function(s) {s.id = 0; return s;}),
+						extra: sync_meta,
+					};
+				});
 		});
 };
 

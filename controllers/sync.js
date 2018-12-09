@@ -32,8 +32,8 @@ var partial_sync = function(req, res) {
 	var immediate = req.query.immediate == '1';
 	if(type) immediate = (type != 'poll');
 	return model.sync_from(user_id, sync_id, !immediate)
-		.spread(function(sync_records, latest_sync_id) {
-			tres.send(res, {records: sync_records, sync_id: latest_sync_id});
+		.spread(function(sync_records, latest_sync_id, sync_meta) {
+			tres.send(res, {records: sync_records, sync_id: latest_sync_id, extra: sync_meta});
 		})
 		.catch(tres.err.bind(tres, res));
 }
