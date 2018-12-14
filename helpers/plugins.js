@@ -1,3 +1,4 @@
+const Promise = require('bluebird');
 const plugins = {};
 
 exports.register = function(name, spec) {
@@ -9,7 +10,7 @@ exports.with = function(name, exists_fn, no_exists_fn) {
 	if(plugin) {
 		return exists_fn(plugin);
 	} else {
-		return no_exists_fn ? no_exists_fn() : null;
+		return no_exists_fn ? no_exists_fn() : Promise.resolve();
 	}
 };
 

@@ -97,7 +97,7 @@ exports.send = function(user_id, space_id, data) {
 		.then(function() {
 			return plugins.with('sync', function(syncer) {
 				return syncer.can_invite(space_id);
-			}, Promise.resolve.bind(Promise));
+			});
 		})
 		.then(function() {
 			return Promise.all([

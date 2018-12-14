@@ -365,7 +365,7 @@ var process_incoming_sync = function(user_id, sync) {
 	// run the sync item through the sync plugin for ......processing
 	var sync_plugin_promise = plugins.with('sync', function(syncer) {
 		return syncer.sync_item(user_id, sync);
-	}, Promise.resolve.bind(Promise));
+	});
 	return sync_plugin_promise
 		.then(function(_sync) {
 			var handler = sync_type_handler[sync.action];
