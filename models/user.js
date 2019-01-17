@@ -111,11 +111,14 @@ exports.join = function(userdata) {
 		return Promise.reject(e);
 	}
 
+	// make sure username is lowercase
+	userdata.username = userdata.username.toLowerCase();
+
 	// create a confirmation token
 	var token = random_token({hash: 'sha512'});
 
 	// check existing username
-	return db.first('SELECT id FROM users WHERE username = {{username}} LIMIT 1', {username: userdata.username})
+	return exports.get_by_email(userdata.username, {raw: true})
 		.then(function(existing) {
 			if(existing) throw error.forbidden('the account "'+userdata.username+'" already exists');
 			var auth = auth_hash(userdata.auth);
@@ -236,6 +239,9 @@ exports.update = function(cur_user_id, user_id, data) {
 	if(!data.user.body) {
 		return Promise.reject(error.bad_request('missing `user.body` in update data'));
 	}
+
+	// make sure username is lowercase
+	data.user.username = data.user.username.toLowerCase();
 
 	// this is going to get a bit "manual" but we need to manage our connection
 	// by hand so we can "transact."
@@ -404,6 +410,7 @@ exports.get_by_id = function(user_id, options) {
 
 exports.get_by_email = function(email, options) {
 	options || (options = {});
+	email = email.toString().toLowerCase();
 	return db.first('SELECT * FROM users WHERE username = {{email}} LIMIT 1', {email: email})
 		.then(function(user) {
 			if(!user) return null;
