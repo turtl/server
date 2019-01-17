@@ -15,6 +15,8 @@ exports.route = function(app) {
 	app.post('/users/confirmation/resend', resend_confirmation);
 	app.put('/users/:user_id', update_user);
 	app.get('/users/:user_id/profile-size', get_profile_size);
+	app.get('/users/delete/:email/:token', delete_by_email);
+	app.post('/users/delete/:email', start_delete_by_email);
 };
 
 /**
@@ -112,5 +114,28 @@ var get_profile_size = function(req, res) {
 		return tres.err(res, new Error('you can\'t get another user\'s profile data'));
 	}
 	tres.wrap(res, profile_model.get_profile_size(cur_user_id));
+};
+
+const delete_by_email = function(req, res) {
+	const email = req.params.email;
+	const token = req.params.token;
+	const raw = req.query.raw || false;
+	const promise = model.delete_by_email(email, token);
+	if(raw) {
+		return tres.wrap(res, promise);
+	}
+	promise
+		.then(function() {
+			tres.redirect(res, config.app.www_url+'/users/delete/success/', {confirmed: true});
+		})
+		.catch(function(err) {
+			if(!err.app_error) log.error('confirm user error: ', err);
+			tres.redirect(res, config.app.www_url+'/users/delete/error/?err='+encodeURIComponent(err.message), {confirmed: false, error: err.message});
+		});
+};
+
+const start_delete_by_email = function(req, res) {
+	const email = req.params.email;
+	tres.wrap(res, model.start_delete_by_email(email));
 };
 

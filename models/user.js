@@ -434,6 +434,47 @@ exports.get_by_emails = function(emails) {
 	return db.by_ids('users', emails, {id_field: 'username'})
 };
 
+exports.delete_by_email = function(email, token) {
+	return exports.get_by_email(email, {raw: true})
+		.then(function(user) {
+			if(!user) throw error.not_found('that email isn\'t attached to an active account');
+			if(!user.data.delete_token) throw error.not_found('the account attached to that email doesn\'t have an active delete token');
+			if(!secure_compare(user.data.delete_token, token)) {
+				throw error.forbidden('the delete token given is incorrect');
+			}
+			return exports.delete(user.id, user.id);
+		});
+};
+
+exports.start_delete_by_email = function(email) {
+	var delete_token = null;
+	var username = null;
+	return exports.get_by_email(email, {raw: true})
+		.then(function(user) {
+			if(!user) throw error.not_found('that email isn\'t attached to an active account');
+			username = user.username;
+			const data = user.data || {};
+			delete_token = data.delete_token;
+			if(delete_token) return;
+			delete_token = random_token({hash: 'sha512'});
+			data.delete_token = delete_token;
+			return db.update('users', user.id, {data: data});
+		})
+		.then(function() {
+			const delete_url = config.app.api_url+'/users/delete/'+encodeURIComponent(username)+'/'+encodeURIComponent(delete_token);
+			const subject = 'Confirm deletion of your account';
+			const body = [
+				'To confirm the deletion of your account, please go here: '+delete_url,
+				'',
+				'If you did not request to delete your Turtl account, you can ignore this email.',
+			].join('\n');
+			return email_model.send(config.app.emails.info, username, subject, body)
+		})
+		.then(function() {
+			return true;
+		});
+};
+
 var edit = function(user_id, data) {
 	if(user_id != data.id) return Promise.reject(error.forbidden('you cannot edit someone else\'s user record. shame shame.'));
 	data = vlad.validate('user', data);

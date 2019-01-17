@@ -15,6 +15,8 @@ var public_routes = [];
 	'get /users/confirm/[^/]+/[a-f0-9]+',
 	'post /cla/sign',
 	'get /health/[a-z0-9]+',
+	'get /users/delete/[^/]+/[a-f0-9]+',
+	'post /users/delete/[^/]+',
 ].map(add_public_route);
 
 exports.verify = function(req, res, next) {
