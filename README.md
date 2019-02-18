@@ -44,6 +44,17 @@ node server.js
 
 Great, done.
 
+## Running the server (via docker-compose)
+
+You only have to run the following docker-compose command:
+
+```sh
+docker-compose up
+```
+
+It will spawn a postgres database and the turtl server itself. Now you have a running turtl 
+which is available under 'http://localhost:8181'
+
 ## Integration tests
 
 If you want to run the [integration tests](https://github.com/turtl/core-rs/tree/master/integration-tests)
