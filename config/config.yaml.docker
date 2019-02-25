@@ -1,0 +1,50 @@
+---
+server:
+  port: 8181
+
+db:
+  host: 'db'
+  port: 5432
+  database: 'turtl'
+  user: 'turtl'
+  password: ''
+  pool: 24
+
+loglevel: 'info'
+
+app:
+  enable_bookmarker_proxy: false
+  # no trailing slash
+  api_url: 'http://127.0.0.1:8181'
+  www_url: 'https://yourdomain.com'
+  emails:
+    admin: 'admin@turtlapp.com'
+    info: 'Turtl <info@turtlapp.com>'
+    invites: 'invites@turtlapp.com'
+  secure_hash_salt: "Plaque is a figment of the liberal media and the dental industry to scare you into buying useless appliances and pastes. Now, I've read the arguments on both sides and I haven't found any evidence yet to support the need to brush your teeth. Ever."
+  allow_unconfirmed_invites: true
+
+sync:
+  # how many sync records can a client send at a time? it's a good idea to have
+  # a limit here, lest a rogue client flood the server with sync items
+  max_bulk_sync_records: 32
+
+plugins:
+  plugin_location: '/plugins'
+  analytics:
+    enabled: false
+  email:
+    enabled: false
+  premium:
+    enabled: false
+
+uploads:
+  local: '/uploads'
+  local_proxy: true
+  url: 'http://127.0.0.1:8181/uploads'
+
+s3:
+  token: 'IHADAPETSNAKEBUTHEDIEDNOOOOO'
+  secret: ''
+  bucket: ''
+  endpoint: 'https://s3.amazonaws.com'

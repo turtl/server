@@ -6,7 +6,7 @@ ARG TURTL_SERVER_PLUGIN_LOCATION
 EXPOSE 8181
 WORKDIR /app
 COPY . .
-COPY config/config.yaml.default config/config.yaml
+COPY config/config.yaml.docker config/config.yaml
 
 RUN apk add -U bash git &&\
   npm install --production &&\
