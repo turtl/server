@@ -53,7 +53,16 @@ docker-compose up
 ```
 
 It will spawn a postgres database and the turtl server itself. Now you have a running turtl 
-which is available under 'http://localhost:8181'
+which is available under 'http://localhost:8181'. 
+
+Be aware: after you cancel the docker-compose the data will be lost. For productive usage you may want
+to store the postgres-data inside a docker volume.
+
+### Configuration via ENV-Variables
+In docker you may want to set each configuration value (for example the database) via environment
+variables. You can override **each** default value via environment variable! Just create a variable named
+with the prefix **TURTLE_** followed by the "yaml-path" written in UPPERCASE. For example: If you want
+to change the **app.api_url** value you have to define the variable name like **TURTL_APP_API_URL**
 
 ## Integration tests
 
