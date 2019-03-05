@@ -1,0 +1,30 @@
+version: '2.1'
+
+services:
+  turtl-server:
+    build:
+      context: ./
+    environment:
+      TURTL_DB_HOST: postgres-db
+      TURTL_DB_PORT: 5432
+      TURTL_DB_DATABASE: turtl
+      TURTL_DB_USER: turtl
+      TURTL_DB_PASSWORD: turtl
+      TURTL_APP_SECURE_HASH_SALT: abuHassN892MMn
+    ports:
+      - 8181:8181
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+
+  postgres-db:
+    image: postgres:11-alpine
+    environment:
+      POSTGRES_PASSWORD: turtl
+      POSTGRES_USER: turtl
+      POSTGRES_DB: turtl
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U turtl"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
