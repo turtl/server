@@ -66,6 +66,7 @@ exports.attach_file = function(user_id, note_id) {
 				return db.by_id('notes', note_id)
 					.then(function(_note) {
 						note = _note;
+						if(!note) throw error.not_found('that note doesn\'t exist');
 						note.data.has_file = true;
 						var file = note.data.file || {};
 						file.size = file_size;
