@@ -10,6 +10,7 @@ AWS.config.update({
 	secretAccessKey: config.s3.secret,
 	s3: {
 		endpoint: config.s3.endpoint,
+		s3ForcePathStyle: config.s3.pathstyle,
 	},
 });
 var s3_stream = require('s3-upload-stream')(new AWS.S3());

@@ -63,4 +63,5 @@ s3:
   secret: ''
   bucket: ''
   endpoint: 'https://s3.amazonaws.com'
+  pathstyle: false
 
