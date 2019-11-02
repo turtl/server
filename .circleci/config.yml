@@ -20,8 +20,9 @@ jobs:
       # set up/run server
       - run: cp config/config.yaml.ci config/config.yaml
       - restore_cache:
-          key: server-npm-v1-{{ checksum "../server/package.json" }}
-          key: server-npm-v1-
+          keys:
+            - server-npm-v1-{{ checksum "../server/package.json" }}
+            - server-npm-v1-
       - run: npm install
       - save_cache:
           key: server-npm-v1-{{ checksum "../server/package.json" }}
