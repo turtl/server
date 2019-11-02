@@ -8,8 +8,8 @@ jobs:
     <<: *defaults
 
     docker:
-      - image: circleci/node:4.8.3
-      - image: circleci/postgres:9.6.2-alpine
+      - image: circleci/node:13.0.1
+      - image: circleci/postgres:12.0-alpine
         environment:
           - POSTGRES_USER=turtl
           - POSTGRES_DB=turtl
