@@ -62,7 +62,9 @@ to store the postgres-data inside a docker volume.
 In docker you may want to set each configuration value (for example the database) via environment
 variables. You can override **each** default value via environment variable! Just create a variable named
 with the prefix **TURTLE_** followed by the "yaml-path" written in UPPERCASE. For example: If you want
-to change the **app.api_url** value you have to define the variable name like **TURTL_APP_API_URL**
+to change the **app.api_url** value you have to define the variable name like **TURTL_APP_API_URL**.
+
+Some configuration values are explained in `config/config.yaml.default`.
 
 ## Integration tests
 
