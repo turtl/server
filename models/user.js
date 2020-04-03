@@ -1,5 +1,7 @@
 "use strict";
 
+const log = require('../helpers/log');
+
 var db = require('../helpers/db');
 var config = require('../helpers/config');
 var Promise = require('bluebird');
@@ -96,7 +98,19 @@ exports.check_auth = function(authinfo) {
 		.then(function(user) {
 			if(!user) throw error.forbidden('bad login: '+username);
 			if(!user.active) throw error.forbidden('user inactive');
-			if(!secure_compare(user.auth, auth_hash(auth))) throw error.forbidden('bad login');
+			if(config.app.login.max_attemps > 0 && user.login_failed_count >= config.app.login.max_attemps) {
+				var currentDate = new Date();
+				if(currentDate.getTime() - user.login_failed_last.getTime() <= config.app.login.lock_duration*1000) {
+					throw error.forbidden('user locked');
+				}
+			}
+			if(!secure_compare(user.auth, auth_hash(auth))) {
+				exports.update_login_failed(user.id);
+				throw error.forbidden('bad login');
+			} else {
+				exports.reset_login_failed(user.id);
+			}
+
 			return clean_user(user);
 		});
 };
@@ -430,6 +444,14 @@ exports.update_last_login = function(user_id) {
 	return db.query('UPDATE users SET last_login = NOW() WHERE id = {{user_id}}', {user_id: user_id});
 };
 
+exports.update_login_failed = function(user_id) {
+	return db.query('UPDATE users SET login_failed_last = NOW(), login_failed_count = login_failed_count + 1 WHERE id = {{user_id}}', {user_id: user_id});
+};
+
+exports.reset_login_failed = function(user_id) {
+	return db.query('UPDATE users SET login_failed_last = NULL, login_failed_count = 0 WHERE id = {{user_id}}', {user_id: user_id});
+};
+
 exports.get_by_emails = function(emails) {
 	return db.by_ids('users', emails, {id_field: 'username'})
 };
@@ -495,4 +517,3 @@ sync_model.register('user', {
 	edit: edit,
 	link: link,
 });
-
