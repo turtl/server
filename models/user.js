@@ -2,6 +2,7 @@
 
 var db = require('../helpers/db');
 var config = require('../helpers/config');
+var plugins = require('../helpers/plugins');
 var Promise = require('bluebird');
 var error = require('../helpers/error');
 var vlad = require('../helpers/validator');
@@ -73,6 +74,7 @@ var clean_user = function(user) {
 	delete user.auth;
 	return user;
 };
+exports.clean_user = clean_user;
 
 var auth_hash = function(authkey) {
 	// two iterations. yes, two. if someone gets the database, they
@@ -122,7 +124,7 @@ exports.join = function(userdata) {
 		.then(function(existing) {
 			if(existing) throw error.forbidden('the account "'+userdata.username+'" already exists');
 			var auth = auth_hash(userdata.auth);
-			return db.insert('users', {
+			var userrecord = {
 				username: userdata.username,
 				auth: auth,
 				active: true,
@@ -130,6 +132,12 @@ exports.join = function(userdata) {
 				confirmation_token: token,
 				data: db.json(data),
 				last_login: db.literal('now()'),
+			};
+
+			return plugins.with('user', function(user_plugin) {
+				return user_plugin.insert(userrecord);
+			}, function() {
+				  return db.insert('users', userrecord);
 			});
 		})
 		.tap(function(user) {
@@ -149,7 +157,7 @@ exports.join = function(userdata) {
 
 var send_confirmation_email = function(user) {
 	var subject = 'Welcome to Turtl! Please confirm your email';
-	var confirmation_url = config.app.api_url+'/users/confirm/'+encodeURIComponent(user.username)+'/'+encodeURIComponent(user.confirmation_token);
+	var confirmation_url = exports.get_confirm_url(user);
 	var body = [
 		'Welcome to Turtl! Your account is active and you\'re ready to start using the app.',
 		'',
@@ -168,26 +176,34 @@ var send_confirmation_email = function(user) {
 		});
 };
 
+exports.get_confirm_url = function(user) {
+	return config.app.api_url+'/users/confirm/'+encodeURIComponent(user.username)+'/'+encodeURIComponent(user.confirmation_token);
+};
+
 exports.confirm_user = function(email, token) {
-	return exports.get_by_email(email, {raw: true})
-		.then(function(user) {
-			if(!user) throw error.not_found('that email isn\'t attached to an active account');
-			if(user.confirmed) throw error.conflict('that account has already been confirmed');
-			var server_token = user.confirmation_token;
-			if(!server_token) throw error.internal('that account has no confirmation token');
-			if(!secure_compare(token, server_token)) throw error.bad_request('invalid confirmation token');
-			return db.update('users', user.id, {confirmed: true, confirmation_token: null});
-		})
-		.tap(function(user) {
-			return sync_model.add_record([user.id], user.id, 'user', user.id, 'edit');
-		})
-		.tap(function(user) {
-			// if thre are pending invites sent to the email that was just
-			// confirmed, we create invite.add sync records for them so the user
-			// sees them in their profile.
-			return invite_model.create_sync_records_for_email(user.id, email);
-		})
-		.then(clean_user);
+	return plugins.with('user', function(user_plugin) {
+		return user_plugin.confirm_user(email, token);
+	}, function() {
+		return exports.get_by_email(email, {raw: true})
+			.then(function(user) {
+				if(!user) throw error.not_found('that email isn\'t attached to an active account');
+				if(user.confirmed) throw error.conflict('that account has already been confirmed');
+				var server_token = user.confirmation_token;
+				if(!server_token) throw error.internal('that account has no confirmation token');
+				if(!secure_compare(token, server_token)) throw error.bad_request('invalid confirmation token');
+				return db.update('users', user.id, {confirmed: true, confirmation_token: null});
+			})
+			.tap(function(user) {
+				return sync_model.add_record([user.id], user.id, 'user', user.id, 'edit');
+			})
+			.tap(function(user) {
+				// if thre are pending invites sent to the email that was just
+				// confirmed, we create invite.add sync records for them so the user
+				// sees them in their profile.
+				return invite_model.create_sync_records_for_email(user.id, email);
+			})
+			.then(clean_user);
+	});
 };
 
 exports.resend_confirmation = function(user_id) {
