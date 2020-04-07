@@ -18,6 +18,11 @@ app:
   # no trailing slash
   api_url: 'http://api.yourdomain.com:8181'
   www_url: 'https://yourdomain.com'
+  login:
+    # Max failed login attemps. Set to -1 to disable
+    max_attemps: 5
+    # User locked for this duration in seconds
+    lock_duration: 60
   emails:
     admin: 'admin@turtlapp.com'
     info: 'Turtl <info@turtlapp.com>'
@@ -64,4 +69,3 @@ s3:
   bucket: ''
   endpoint: 'https://s3.amazonaws.com'
   pathstyle: false
-

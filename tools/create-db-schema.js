@@ -50,6 +50,8 @@ const builder = {
 	},
 	not_null: function(type) { return type+' not null'; },
 
+  default: function(type, df) { return type+' default '+df; },
+
 	table: function(table_name, options) {
 		var fields = options.fields;
 		var table_indexes = options.indexes;
@@ -215,6 +217,8 @@ builder.table('users', {
 		confirmation_token: ty.text,
 		data: ty.json,
 		last_login: ty.date,
+    login_failed_last: ty.date,
+    login_failed_count: builder.default(ty.int, 0),
 	},
 	indexes: [
 		{name: 'username', fields: ['username'], unique: true},
@@ -257,4 +261,3 @@ function run() {
 }
 
 run();
-
