@@ -1,5 +1,6 @@
 ---
 server:
+  host:
   port: 8181
 
 db:
@@ -40,6 +41,8 @@ plugins:
     enabled: false
   email:
     enabled: false
+    endpoint:
+    defaults: {}
   premium:
     enabled: false
 
