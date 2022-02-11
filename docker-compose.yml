@@ -16,9 +16,14 @@ services:
     depends_on:
       postgres-db:
         condition: service_healthy
+    volumes:
+      - ./config:/app/config
+      - ./uploads:/uploads
+    restart: unless-stopped
+
 
   postgres-db:
-    image: postgres:11-alpine
+    image: postgres
     environment:
       POSTGRES_PASSWORD: turtl
       POSTGRES_USER: turtl
@@ -28,3 +33,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    volumes:
+      - /postgres:/var/lib/postgresql/data
+    restart: unless-stopped
