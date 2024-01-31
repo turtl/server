@@ -7,6 +7,6 @@
   "repository": "https://github.com/turtl/server",
   "dependencies": {
     "bluebird": "3.4.7",
-    "nodemailer": "4.6.8"
+    "nodemailer": "6.9.8"
   }
 }
